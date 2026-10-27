@@ -9,3 +9,6 @@ __pycache__/
 # 운영체제 임시 파일
 .DS_Store
 Thumbs.db
+
+# 참가신청서(개인정보 포함)와 그 PDF 는 공개 저장소에 올리지 않는다
+docs/*application-form*
