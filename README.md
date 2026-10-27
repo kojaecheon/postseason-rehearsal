@@ -2,6 +2,8 @@
 
 연습용 가상 예매 사이트. 카운트다운 → 예매하기 → 접속 중 → 대기열 → 보안문자 → 구역·좌석 선택 → 권종 → 결제 → 완료 → 예매 내역·취소까지, 실제 예매처와 비슷한 흐름을 휴대폰이나 PC에서 미리 연습한다. 실제 결제와 개인정보 입력은 없다.
 
+- 웹 주소(GitHub Pages, 누구나 접속): https://kojaecheon.github.io/postseason-rehearsal/
+- 소스 저장소(공개): https://github.com/kojaecheon/postseason-rehearsal
 - 게시 주소: https://claude.ai/artifact/LU6YbLkdTxMjvjjFYa3n7S (링크가 있는 사람은 누구나 열 수 있는 상태, 공유 설정은 페이지의 공유 메뉴에서)
 - 현재 버전: 2.0.0-clean (2026-10-19 전면 재작성)
 
