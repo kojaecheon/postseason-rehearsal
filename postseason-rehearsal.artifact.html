@@ -1,0 +1,2099 @@
+<title>포스트시즌 예매 리허설</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" id="fontCss" media="print" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500;600&family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#ffffff;--surface:#f9fafb;--surface-2:#f3f4f6;
+  --text:#000000;--text-2:#3d3d3d;--muted:#616161;
+  --line:#e5e7eb;--line-2:#d1d5db;
+  --primary:#124eeb;--primary-hover:#0f42c9;--on-primary:#ffffff;
+  --blue-soft:#eef3ff;--blue-line:#9db4f5;
+  --good:#0f8a4a;--good-bg:#ecfdf3;--warn:#b45309;--warn-bg:#fff7e6;--bad:#dc2626;--bad-bg:#fef2f2;
+  --note-bg:#fff8eb;--note-text:#92400e;--note-line:rgba(180,83,9,.28);
+  --r-sm:6px;--r-md:8px;--r-lg:12px;
+  --font:"Inter","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --gutter:16px;--top-h:80px;
+}
+[hidden]{display:none!important}
+body{background:var(--bg)}
+.ps{min-height:100vh;background:var(--bg);color:var(--text);font:400 14px/1.55 var(--font);letter-spacing:-.005em;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;word-break:keep-all;overflow-wrap:break-word}
+.ps *,.ps *::before,.ps *::after{box-sizing:border-box}
+:where(.ps) :where(h2,h3,p){margin:0}
+:where(.ps) button{font-family:inherit}
+.ps :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* 버튼 */
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;color:var(--text);font:500 14px/1.2 var(--font);letter-spacing:-.01em;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.btn:hover{background:var(--surface)}
+.btn--primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn--primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn--dark{background:#000;border-color:#000;color:#fff}
+.btn--dark:hover{background:#1f1f1f}
+.btn:disabled,.btn:disabled:hover{cursor:not-allowed;background:var(--surface-2);border-color:var(--line);color:#9ca3af}
+.btn--block{width:100%}
+
+/* 상단 바 */
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(1.4) blur(8px);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top__in{max-width:1180px;margin:0 auto;padding:8px max(var(--gutter),env(safe-area-inset-right)) 8px max(var(--gutter),env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name act" "chip chip";align-items:center;gap:4px 10px}
+.top__name{grid-area:name;font-weight:600;font-size:14px;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top__chip{grid-area:chip;justify-self:start;font-size:11px;line-height:1.4;color:var(--muted);padding:1px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.top__act{grid-area:act;display:flex;gap:6px}
+.top__act .btn{padding:0 12px;font-size:13px}
+
+/* 레이아웃 */
+.main{max-width:1180px;margin:0 auto;padding:16px max(var(--gutter),env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) max(var(--gutter),env(safe-area-inset-left));display:grid;gap:12px;align-items:start}
+.col{display:grid;gap:12px;min-width:0}
+
+/* 예매 사이트 카드 */
+.site{border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;overflow:hidden;scroll-margin-top:calc(var(--top-h) + 8px)}
+.site__head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 12px;padding:10px 12px 0}
+.brand{display:flex;align-items:center;gap:7px;font:600 16px/1 var(--font);letter-spacing:-.035em}
+.brand__mark{width:22px;height:22px;border-radius:6px;background:var(--primary);color:#fff;display:grid;place-items:center;font:600 12px/1 var(--mono)}
+.tag{font:500 11px/1.5 var(--font);letter-spacing:0;color:var(--primary);background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:999px;padding:0 7px}
+.clock{font-size:12px;color:var(--muted);white-space:nowrap}
+.clock time{font:600 13px var(--mono);color:#000;margin-left:4px}
+.menu{order:3;flex:1 0 100%;display:flex;gap:2px;margin-top:6px;border-bottom:1px solid var(--line)}
+.menu button{min-height:44px;padding:0 10px;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;font:500 14px var(--font);color:var(--muted);cursor:pointer;touch-action:manipulation}
+.menu button[aria-current="page"]{color:#000;border-bottom-color:#000}
+.menu__count{font-family:var(--mono);margin-left:4px}
+.steps{list-style:none;margin:0;padding:10px 6px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:var(--surface);border-bottom:1px solid var(--line)}
+.steps li{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;font:500 11.5px/1.2 var(--font);color:var(--muted);text-align:center}
+.steps li::before{content:"";position:absolute;top:11px;left:calc(-50% + 15px);right:calc(50% + 15px);height:1px;background:var(--line-2)}
+.steps li:first-child::before{display:none}
+.steps__no{width:22px;height:22px;border-radius:50%;border:1px solid var(--line-2);background:#fff;display:grid;place-items:center;font:600 11px/1 var(--mono);color:var(--muted)}
+.steps li[data-state="current"]{color:#000;font-weight:600}
+.steps li[data-state="current"] .steps__no{background:var(--primary);border-color:var(--primary);color:#fff}
+.steps li[data-state="done"] .steps__no{background:var(--blue-soft);border-color:var(--blue-line);color:var(--primary)}
+.steps li[data-state="done"]::before,.steps li[data-state="current"]::before,.steps li[data-state="fail"]::before{background:var(--blue-line)}
+.steps li[data-state="fail"]{color:var(--bad)}
+.steps li[data-state="fail"] .steps__no{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.limit{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--text-2)}
+.limit__time{font:600 14px var(--mono);color:#000;min-width:50px}
+.limit__track{flex:1;height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.limit__fill{display:block;height:100%;width:100%;background:var(--primary)}
+.limit[data-level="warn"] .limit__fill{background:var(--warn)}
+.limit[data-level="warn"] .limit__time{color:var(--warn)}
+.limit[data-level="bad"] .limit__fill{background:var(--bad)}
+.limit[data-level="bad"] .limit__time{color:var(--bad)}
+.site__body{padding:16px 12px 18px}
+.scr-title{font:600 19px/1.35 var(--font);letter-spacing:-.035em}
+.scr-sub{margin-top:4px;color:var(--muted);font-size:13.5px}
+.sec-title{font:600 12px/1.4 var(--font);color:var(--primary);margin:22px 0 8px}
+
+/* 홈 */
+.prod{display:grid;grid-template-columns:120px minmax(0,1fr);grid-template-areas:"poster head" "meta meta";gap:12px 14px;align-items:start}
+.prod__poster{grid-area:poster;display:block;width:100%;height:auto;aspect-ratio:380/504;border:1px solid var(--line);border-radius:var(--r-md);background:var(--blue-soft)}
+.prod__head{grid-area:head;min-width:0}
+.prod__kicker{font:500 11.5px var(--font);color:var(--primary)}
+.prod__title{margin:3px 0 8px;font:600 16px/1.35 var(--font);letter-spacing:-.03em}
+.facts{margin:0;display:grid;gap:3px}
+.facts div{display:flex;gap:8px;font-size:12.5px;line-height:1.5}
+.facts dt{flex:none;width:56px;color:var(--muted)}
+.facts dd{margin:0;color:var(--text-2);min-width:0}
+.prod__meta{grid-area:meta;padding-top:10px;border-top:1px solid var(--line)}
+#homeOpen{font-weight:500;color:#000}
+.buy{display:flex;align-items:stretch;gap:10px;margin-top:14px}
+.buy__btn{flex:1;min-height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:var(--r-md);background:var(--surface-2);color:#7a7a7a;font:600 17px/1 var(--font);letter-spacing:-.02em;cursor:not-allowed;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.buy__btn.is-count{background:#e9ebef;color:var(--text-2)}
+.buy__btn.is-count .mono{font-size:18px;color:#000}
+.buy__btn.is-on{background:var(--primary);color:#fff;cursor:pointer}
+.buy__btn.is-on:hover{background:var(--primary-hover)}
+.buy__clock{flex:none;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:2px;font-size:11px;color:var(--muted)}
+.buy__clock span{font:600 15px var(--mono);color:#000}
+.price{width:100%;border-collapse:collapse;font-size:13px}
+.price td{padding:9px 0;border-bottom:1px solid var(--line)}
+.price tr:first-child td{border-top:1px solid var(--line)}
+.price td:last-child{text-align:right;font:500 13px var(--mono)}
+.sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:8px;vertical-align:1px;background:var(--primary)}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:12.5px;color:var(--text-2)}
+.notes li{position:relative;padding-left:12px}
+.notes li::before{content:"";position:absolute;left:0;top:.62em;width:4px;height:4px;border-radius:50%;background:var(--line-2)}
+
+/* 연습 정보 */
+.practice{margin-top:16px;padding:10px 12px;border:1px dashed var(--note-line);border-radius:var(--r-md);background:var(--note-bg);color:var(--note-text);font-size:12.5px;line-height:1.55}
+.practice p+p{margin-top:3px}
+.practice__tag{display:inline-block;margin-right:6px;padding:0 6px;border:1px solid var(--note-line);border-radius:999px;background:#fff;font:600 10.5px/1.6 var(--font)}
+
+/* 대기열 */
+.q{text-align:center}
+.q__prod{display:inline-block;margin-top:12px;padding:4px 10px;border-radius:999px;background:var(--surface-2);font-size:12px;color:var(--text-2)}
+.q__card{margin-top:16px;padding:20px 16px 14px;border:1px solid var(--line);border-radius:var(--r-lg)}
+.q__label{font-size:13px;color:var(--muted)}
+.q__rank{margin:6px 0 16px;font:600 clamp(44px,15vw,72px)/1 var(--mono);letter-spacing:-.045em;color:var(--primary)}
+.q__track{position:relative;height:6px;margin:0 8px;border-radius:99px;background:var(--surface-2)}
+.q__fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--blue-line)}
+.q__dot{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px rgba(18,78,235,.14);transition:left .2s linear}
+.q__ends{display:flex;justify-content:space-between;margin:6px 2px 0;font-size:11px;color:var(--muted)}
+.q__stats{display:grid;grid-template-columns:1fr 1fr;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
+.q__stats dt{font-size:12px;color:var(--muted)}
+.q__stats dd{margin:2px 0 0;font:600 16px var(--mono)}
+.q__stats div+div{border-left:1px solid var(--line)}
+.q__notes{margin-top:14px;text-align:left}
+.q .practice{text-align:left}
+.q__refresh{margin-top:12px}
+
+/* 입력 공통 */
+.field{display:grid;gap:6px;margin-bottom:12px;min-width:0}
+.field>label,.legend{font:500 13px var(--font);color:var(--text-2)}
+.input,.select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;color:#000;font:500 16px var(--font)}
+.input:focus,.select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(18,78,235,.15)}
+.input:disabled,.select:disabled{background:var(--surface-2);color:var(--muted)}
+.select{appearance:none;-webkit-appearance:none;padding-right:30px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%23616161' stroke-width='1.5'/%3E%3C/svg%3E") right 10px center/12px no-repeat}
+.hint{margin-top:6px;font-size:12px;color:var(--muted)}
+.msg{margin-top:10px;padding:9px 12px;border-radius:var(--r-md);font-size:13px;background:var(--surface)}
+.msg:empty{display:none}
+.msg[data-tone="good"]{background:var(--good-bg);color:var(--good)}
+.msg[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.msg[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
+.legend{display:block;margin-bottom:6px;padding:0}
+
+/* 보안문자 */
+.cap{display:flex;gap:8px;margin:16px 0 14px}
+.cap canvas{flex:1;min-width:0;width:100%;height:auto;aspect-ratio:300/90;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2)}
+.icon-btn{flex:none;width:48px;display:grid;place-items:center;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;color:var(--text-2);cursor:pointer;touch-action:manipulation}
+.icon-btn:hover{background:var(--surface)}
+#capInput{font-family:var(--mono);font-weight:600;letter-spacing:.24em;text-transform:uppercase}
+#capInput::placeholder{font:400 13px var(--font);letter-spacing:0;text-transform:none;color:#8a8a8a}
+.cap-submit{margin-top:12px}
+
+/* 좌석 */
+.seat-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+.seat-head p{font-size:13px;color:var(--muted)}
+.seat-head p b{font:600 13px var(--mono);color:#000}
+.zones{display:grid;gap:8px;margin-top:12px}
+.zone{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:6px 10px;width:100%;min-height:58px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;color:inherit;font:inherit;text-align:left;cursor:pointer;touch-action:manipulation}
+.zone:hover{border-color:var(--blue-line);background:var(--blue-soft)}
+.zone__sw{width:8px;height:30px;border-radius:3px;background:var(--primary)}
+.zone__main{display:grid;gap:1px;min-width:0}
+.zone__name{font-weight:600;font-size:14px;letter-spacing:-.02em}
+.zone__left{font-size:12px;color:var(--muted)}
+.zone__price{font:500 13px var(--mono)}
+.zone__bar{grid-column:1/-1;height:4px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.zone__bar i{display:block;height:100%;background:var(--primary)}
+.zone:disabled{cursor:not-allowed;background:var(--surface);color:#9ca3af}
+.zone:disabled .zone__left{color:var(--bad);font-weight:600}
+.zone:disabled .zone__sw{background:var(--line-2)!important}
+.back{min-height:44px;padding:0 2px;border:0;background:none;color:var(--primary);font:500 14px var(--font);cursor:pointer}
+.block-title{font:600 18px/1.35 var(--font);letter-spacing:-.035em}
+.block-sub{margin:2px 0 12px;font-size:13px;color:var(--muted)}
+.block-sub .mono{color:#000}
+.ground{max-width:560px;margin:0 auto 10px;padding:6px 0;border-radius:999px 999px 6px 6px;background:var(--surface-2);text-align:center;font:500 11px var(--font);letter-spacing:.06em;color:var(--muted)}
+.sgrid{display:grid;grid-template-columns:11px repeat(7,minmax(20px,1fr)) 8px repeat(7,minmax(20px,1fr));gap:3px 2px;max-width:560px;margin:0 auto}
+.sgrid__row{display:flex;align-items:center;font:500 9.5px var(--mono);color:var(--muted)}
+.seat{display:block;width:100%;min-width:20px;aspect-ratio:1;padding:0;border:1px solid var(--blue-line);border-radius:4px;background:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.seat:hover{background:var(--blue-soft)}
+.seat.is-sold,.seat.is-sold:hover{background:var(--surface-2);border-color:var(--surface-2);cursor:default}
+.seat.is-mine,.seat.is-mine:hover{background:var(--primary);border-color:var(--primary)}
+.legend-list{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin:12px 0 0;padding:0;font-size:12px;color:var(--muted)}
+.legend-list i{display:inline-block;width:12px;height:12px;margin-right:5px;border-radius:3px;vertical-align:-2px;border:1px solid var(--blue-line);background:#fff}
+.legend-list .lg-sold{background:var(--surface-2);border-color:var(--surface-2)}
+.legend-list .lg-mine{background:var(--primary);border-color:var(--primary)}
+.auto{display:flex;align-items:center;gap:10px;margin-top:14px}
+.auto .btn{flex:none}
+.auto p{font-size:12px;color:var(--muted)}
+.chips{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0}
+.chips li{padding:5px 10px;border-radius:999px;background:#000;color:#fff;font:500 12.5px var(--font)}
+.chips .chips__empty{background:none;color:var(--muted);padding:5px 0}
+.seat-done{margin-top:14px}
+
+/* 권종·결제 */
+.tk{width:100%;margin-top:14px;border-collapse:collapse;font-size:13px}
+.tk th{padding:8px 6px;border-bottom:1px solid var(--line);background:var(--surface);font:500 12px var(--font);color:var(--muted);text-align:left}
+.tk td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tk th:last-child,.tk td:last-child{text-align:right;white-space:nowrap}
+.tk td:last-child{font:500 13px var(--mono)}
+.tk .select{min-height:44px;min-width:108px;font-size:14px}
+.sum{margin:14px 0 0;padding:2px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.sum div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:13.5px}
+.sum div+div{border-top:1px solid var(--line)}
+.sum dt{flex:none;color:var(--text-2)}
+.sum dd{margin:0;font:500 14px var(--mono);text-align:right}
+.sum .is-total dt{font-weight:600;color:#000}
+.sum .is-total dd{font:600 17px var(--mono);color:var(--primary)}
+.sum--text dd{font:500 13px/1.45 var(--font)}
+.btn-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:8px;margin-top:16px}
+.radios{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.radio{position:relative;display:block}
+.radio input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.radio span{display:flex;align-items:center;justify-content:center;min-height:44px;padding:4px 6px;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;font:500 13px/1.25 var(--font);text-align:center}
+.radio input:checked+span{background:#000;border-color:#000;color:#fff}
+.radio input:focus-visible+span{outline:2px solid var(--primary);outline-offset:2px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.agree{padding:0 12px;border:1px solid var(--line);border-radius:var(--r-md)}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13.5px;cursor:pointer}
+.check input{flex:none;width:18px;height:18px;margin:0;accent-color:var(--primary)}
+.check--all{font-weight:600;border-bottom:1px solid var(--line)}
+.req{color:var(--primary);font-weight:600}
+
+/* 완료 */
+.done{text-align:center}
+.status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font:600 12px/1.4 var(--font)}
+.status[data-tone="good"]{background:var(--good-bg);color:var(--good)}
+.status[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+.status[data-tone="muted"]{background:var(--surface-2);color:var(--muted)}
+.done__title{margin:10px 0 6px;font:600 22px/1.3 var(--font);letter-spacing:-.035em}
+.done__title:focus{outline:none}
+.done__no{margin-bottom:6px;font-size:12.5px;color:var(--muted)}
+.done__no .mono{margin-left:6px;font-size:16px;font-weight:600;color:var(--primary)}
+.done__sub{max-width:460px;margin:0 auto;font-size:13px;color:var(--muted)}
+.tl{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.tl li{display:grid;gap:3px;padding:10px 2px;text-align:center}
+.tl li+li{border-left:1px solid var(--line)}
+.tl span{font-size:11px;color:var(--muted)}
+.tl strong{font:600 13px var(--mono);letter-spacing:-.03em}
+.dsum{display:grid;gap:10px;margin-top:14px;text-align:left}
+.dsum section{padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md)}
+.dsum h3{margin-bottom:6px;font:600 12px var(--font);color:var(--primary)}
+.dsum dl{margin:0;display:grid;gap:4px}
+.dsum dl div{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.dsum dt{flex:none;color:var(--muted)}
+.dsum dd{margin:0;text-align:right;font-weight:500}
+.dsum .is-bad{border-color:#fecaca;background:var(--bad-bg)}
+.dsum .is-bad h3{color:var(--bad)}
+.kbd-hint{margin-top:10px;font-size:12px;color:var(--muted)}
+.kbd-hint kbd{font:500 11px var(--mono);padding:1px 5px;border:1px solid var(--line-2);border-radius:4px;background:var(--surface)}
+
+/* 예매 내역 */
+.hist{display:grid;gap:10px;margin-top:14px}
+.hcard{padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md)}
+.hcard__top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hcard__no{font:600 14px var(--mono)}
+.hcard__title{margin:8px 0 2px;font-weight:600;font-size:14px;letter-spacing:-.02em}
+.hcard__seats{list-style:none;margin:6px 0;padding:0;font-size:13px;color:var(--text-2)}
+.hcard__meta{font-size:12.5px;color:var(--muted)}
+.hcard.is-canceled{background:var(--surface)}
+.hcard.is-canceled .hcard__title,.hcard.is-canceled .hcard__seats{color:var(--muted)}
+.hcard__act{margin-top:10px}
+.confirm{margin-top:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--warn-bg);color:var(--warn);font-size:13px}
+.confirm .btn-row{margin-top:8px;grid-template-columns:1fr 1fr}
+.empty{padding:28px 14px;border:1px dashed var(--line-2);border-radius:var(--r-md);text-align:center;color:var(--muted);font-size:13px}
+
+/* 결과·기록 */
+.box{padding:14px;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff}
+.box__title{margin-bottom:8px;font:600 12px var(--font);color:var(--primary)}
+.result-line{margin-bottom:12px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface);font-size:14px;font-weight:500;color:var(--text-2)}
+.result-line[data-tone="good"]{background:var(--good-bg);color:var(--good)}
+.result-line[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.result-line[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+.stats{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stats div{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md)}
+.stats dt{font-size:11.5px;color:var(--muted)}
+.stats dd{margin:2px 0 0;font:600 18px var(--mono)}
+.log{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;font-size:12.5px}
+.log li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.log li:last-child{border-bottom:0}
+.log time{flex:none;font:500 12px/1.55 var(--mono);color:var(--muted)}
+.log li[data-tone="good"] span{color:var(--good)}
+.log li[data-tone="warn"] span{color:var(--warn)}
+.log li[data-tone="bad"] span{color:var(--bad)}
+.log .log__empty{color:var(--muted)}
+
+/* 연습 설정 패널 */
+.panel{border:1px solid var(--line);border-radius:var(--r-lg);background:#fff}
+.panel__toggle{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;padding:0 14px;border:0;background:none;font:600 14px var(--font);color:#000;cursor:pointer}
+.panel__toggle::after{content:"";width:8px;height:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+.panel__toggle[aria-expanded="true"]::after{transform:rotate(-135deg) translateY(-2px)}
+.panel__body{padding:2px 14px 14px}
+.panel.is-collapsed .panel__body{display:none}
+.panel__title{font:600 15px var(--font);letter-spacing:-.025em;padding:12px 0 2px}
+.panel__lead{font-size:12px;color:var(--muted)}
+.opt{padding:14px 0;border-top:1px solid var(--line)}
+.panel__lead+.opt{border-top:0}
+.opt__title{margin-bottom:8px;font:600 12px var(--font);color:var(--primary)}
+.opt__help{margin-top:8px;font-size:12px;color:var(--muted)}
+.opt__lock{margin-top:8px;font-size:12px;color:var(--warn)}
+.seg{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:6px}
+.seg__btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:44px;padding:5px 6px;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;color:var(--text-2);font:500 13px/1.25 var(--font);text-align:center;cursor:pointer;touch-action:manipulation}
+.seg__btn:hover{background:var(--surface)}
+.seg__btn small{font:500 11px/1.3 var(--font);color:var(--muted)}
+.seg__btn[aria-pressed="true"],.seg__btn[aria-pressed="true"]:hover{background:#000;border-color:#000;color:#fff}
+.seg__btn[aria-pressed="true"] small{color:#d1d5db}
+.seg__btn:disabled{opacity:.45;cursor:not-allowed}
+.start-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.start-row .btn{min-width:96px}
+.pc-clock{font-size:12px;color:var(--muted)}
+.pc-clock time{margin-left:4px;font:600 13px var(--mono);color:#000}
+.judge{gap:8px}
+.judge li::before{background:var(--blue-line)}
+.judge b{font-weight:600;color:#000}
+
+/* 오버레이 */
+.ov{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:rgba(255,255,255,.84);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.ov__box{width:min(320px,100%);padding:26px 20px 22px;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+.ov__box:focus{outline:none}
+.spin{display:inline-block;width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+.ov__alert{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--bad-bg);color:var(--bad);font:600 18px/1 var(--font)}
+.ov__title{margin-top:14px;font:600 16px/1.4 var(--font);letter-spacing:-.02em}
+.ov__text{margin-top:4px;font-size:13px;color:var(--muted)}
+.ov__retry{margin-top:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-width:380px){
+  .site__body{padding-left:8px;padding-right:8px}
+  .sgrid{grid-template-columns:10px repeat(7,minmax(16px,1fr)) 6px repeat(7,minmax(16px,1fr));gap:3px 1px}
+  .seat{min-width:16px}
+}
+@media (min-width:761px){
+  .top__in{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"name chip act";gap:12px}
+  .top__name{font-size:15px}
+  .top__act .btn{padding:0 14px;font-size:14px}
+  .site__head{padding:8px 16px;border-bottom:1px solid var(--line)}
+  .menu{order:0;flex:0 1 auto;margin:0 auto 0 8px;border:0}
+  .menu button{min-height:40px}
+  .steps{padding:12px 10px}
+  .limit{padding:8px 16px}
+  .site__body{padding:24px}
+  .prod{grid-template-columns:200px minmax(0,1fr);grid-template-rows:auto 1fr;grid-template-areas:"poster head" "poster meta";gap:10px 24px}
+  .prod__title{font-size:21px}
+  .facts div{font-size:13.5px}
+  .facts dt{width:64px}
+  .zones{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .dsum{grid-template-columns:1fr 1fr}
+  .scr-title{font-size:21px}
+  .q__card,.q__notes,.q .practice{max-width:460px;margin-left:auto;margin-right:auto}
+}
+@media (min-width:1024px){
+  .main{grid-template-columns:minmax(0,1fr) 340px;gap:20px;padding-top:20px}
+  .panel{position:sticky;top:calc(var(--top-h) + 16px);max-height:calc(100vh - var(--top-h) - 32px);overflow:auto}
+  .panel__toggle{display:none}
+  .panel.is-collapsed .panel__body{display:block}
+  .panel__body{padding-top:4px}
+}
+@media (prefers-reduced-motion:reduce){
+  .spin{animation:none;border-right-color:var(--primary)}
+  .q__dot{transition:none}
+}
+</style>
+<div class="ps" id="app">
+<header class="top" id="topBar">
+  <div class="top__in">
+    <strong class="top__name">포스트시즌 예매 리허설</strong>
+    <span class="top__chip">연습용 · 가상 예매 사이트 · 실제 결제 없음</span>
+    <div class="top__act">
+      <button type="button" class="btn btn--primary" id="topStart">연습 시작</button>
+      <button type="button" class="btn" id="topSeats">좌석 선택부터</button>
+    </div>
+  </div>
+</header>
+<main class="main">
+  <div class="col">
+    <section class="site" id="site" aria-label="가상 예매 사이트 Rehearsal Ticket">
+      <div class="site__head">
+        <div class="brand"><span class="brand__mark" aria-hidden="true">R</span>Rehearsal Ticket <span class="tag">연습용</span></div>
+        <nav class="menu" aria-label="예매 사이트 메뉴">
+          <button type="button" id="navBook" aria-current="page">예매</button>
+          <button type="button" id="navHistory">예매 내역<span class="menu__count" id="navCount">0</span></button>
+        </nav>
+        <p class="clock">서버시간<time id="serverClock">--:--:--</time></p>
+      </div>
+      <ol class="steps" id="steps" aria-label="예매 단계">
+        <li><span class="steps__no">1</span><span>대기열</span></li>
+        <li><span class="steps__no">2</span><span>보안문자</span></li>
+        <li><span class="steps__no">3</span><span>좌석 선택</span></li>
+        <li><span class="steps__no">4</span><span>권종·결제</span></li>
+        <li><span class="steps__no">5</span><span>완료</span></li>
+      </ol>
+      <div class="limit" id="limitBar" hidden>
+        <span>남은 시간</span><span class="limit__time" id="limitTime">00:00</span>
+        <span class="limit__track" aria-hidden="true"><span class="limit__fill" id="limitFill"></span></span>
+      </div>
+      <div class="site__body">
+
+  <section id="scrHome" aria-labelledby="homeTitle">
+    <div class="prod">
+      <canvas class="prod__poster" id="posterCanvas" width="380" height="504" role="img" aria-label="연습용 포스터: REHEARSAL, POST SEASON, 2026 · KBO 포스트시즌"></canvas>
+      <div class="prod__head">
+        <p class="prod__kicker">야구 · 연습 전용 상품</p>
+        <h2 class="prod__title" id="homeTitle">[연습] 2026 KBO 포스트시즌 한국시리즈 1차전</h2>
+        <dl class="facts">
+          <div><dt>장소</dt><dd id="homeVenue">잠실야구장</dd></div>
+          <div><dt>경기일</dt><dd>2026.10.31 (토) 14:00</dd></div>
+        </dl>
+      </div>
+      <dl class="facts prod__meta">
+        <div><dt>예매 오픈</dt><dd id="homeOpen">연습 시작을 누르면 카운트다운이 시작돼요</dd></div>
+        <div><dt>관람 등급</dt><dd>전체 관람가 · 인당 최대 4매</dd></div>
+      </dl>
+    </div>
+    <div class="buy">
+      <button type="button" class="buy__btn" id="buyBtn" aria-disabled="true"><span id="buyLabel">판매 예정입니다</span><span class="mono" id="buyNum" hidden></span></button>
+      <p class="buy__clock">서버시간<span id="buyClock">--:--:--</span></p>
+    </div>
+    <h3 class="sec-title">좌석 등급 · 가격</h3>
+    <table class="price"><caption class="sr-only">좌석 등급별 가격</caption><tbody id="priceBody"></tbody></table>
+    <h3 class="sec-title">예매 안내</h3>
+    <ul class="notes">
+      <li>예매 수수료는 1매당 1,000원이며, 모바일 티켓은 무료예요.</li>
+      <li id="homeLimitNote">예매 화면으로 넘어간 뒤 3분 안에 결제를 마치지 않으면 예매가 자동으로 종료돼요.</li>
+      <li>취소는 예매 내역에서 할 수 있어요. 연습용이라 실제로 돌려받는 돈은 없어요.</li>
+    </ul>
+  </section>
+
+  <section class="q" id="scrQueue" aria-labelledby="queueTitle" hidden>
+    <h2 class="scr-title" id="queueTitle">접속 인원이 많아 대기 중입니다.</h2>
+    <p class="scr-sub">조금만 기다려주세요.</p>
+    <p class="q__prod" id="qProduct">[연습] 잠실야구장 · 포스트시즌 대비</p>
+    <div class="q__card">
+      <p class="q__label">나의 대기순서</p>
+      <p class="q__rank mono" id="qRank">0</p>
+      <div class="q__track" aria-hidden="true"><span class="q__fill" id="qFill"></span><span class="q__dot" id="qDot"></span></div>
+      <div class="q__ends" aria-hidden="true"><span>대기 시작</span><span>예매 화면</span></div>
+      <dl class="q__stats">
+        <div><dt>현재 대기인원</dt><dd id="qWaiting">0명</dd></div>
+        <div><dt>예매율</dt><dd id="qRate">0.0%</dd></div>
+      </dl>
+    </div>
+    <ul class="notes q__notes">
+      <li id="qLimitNote">좌석 선택부터 결제까지 3분 안에 마쳐야 해요. 시간이 지나면 예매가 자동으로 종료돼요.</li>
+      <li>차례가 되면 따로 누르지 않아도 예매 화면이 열려요. 이 화면을 그대로 두세요.</li>
+      <li>새로고침하거나 창을 다시 열면 순서가 처음부터 다시 매겨져서 훨씬 오래 기다리게 돼요.</li>
+    </ul>
+    <div class="practice">
+      <p><span class="practice__tag">연습 정보</span><span id="qInfoWait">예상 대기 0분 0초</span></p>
+      <p id="qInfoMe">-</p>
+    </div>
+    <button type="button" class="btn btn--block q__refresh" id="qRefresh">새로고침 (실수 체험)</button>
+  </section>
+
+  <section id="scrCaptcha" aria-labelledby="capTitle" hidden>
+    <h2 class="scr-title" id="capTitle">화면의 문자를 입력해주세요</h2>
+    <p class="scr-sub">문자 인증을 마치면 바로 좌석을 고를 수 있어요.</p>
+    <div class="cap">
+      <canvas id="capCanvas" width="300" height="90" role="img" aria-label="보안문자 이미지: 영문 대문자 6자"></canvas>
+      <button type="button" class="icon-btn" id="capNew" aria-label="새 문자" title="새 문자"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.76-4.24" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 3.5V7h-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="field">
+      <label for="capInput">보안문자 입력</label>
+      <input class="input" id="capInput" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="화면의 문자를 입력하세요 (대소문자 구분 없음)">
+      <p class="hint">한/영 전환을 잊어도 괜찮아요. 한글 모드로 쳐도 같은 자리의 영문 키로 바뀌어요.</p>
+    </div>
+    <p class="msg" id="capMsg" aria-live="polite"></p>
+    <button type="button" class="btn btn--primary btn--block cap-submit" id="capSubmit" disabled>입력완료</button>
+    <div class="practice">
+      <p><span class="practice__tag">연습 정보</span><span id="capInfo">경과 0.0초</span></p>
+    </div>
+  </section>
+
+  <section id="scrSeats" aria-labelledby="zoneTitle" hidden>
+    <div id="zoneView">
+      <div class="seat-head">
+        <h2 class="scr-title" id="zoneTitle">구역을 선택하세요</h2>
+        <p id="seatHeadInfo">남은 좌석 약 0석 · 희망 2매</p>
+      </div>
+      <p class="msg" id="singleWarn" data-tone="warn" hidden></p>
+      <div class="zones" id="zoneList"></div>
+    </div>
+    <div id="blockView" hidden>
+      <button type="button" class="back" id="blockBack">← 구역 다시 선택</button>
+      <h2 class="block-title" id="blockTitle">-</h2>
+      <p class="block-sub" id="blockSub">-</p>
+      <p class="msg" id="blockWarn" data-tone="warn" hidden></p>
+      <div class="ground" aria-hidden="true">그라운드 방향</div>
+      <div class="sgrid" id="seatGrid" role="group" aria-label="좌석 배치도: 10열, 열마다 14번까지"></div>
+      <ul class="legend-list" aria-hidden="true">
+        <li><i></i>선택 가능</li><li><i class="lg-sold"></i>판매 완료</li><li><i class="lg-mine"></i>내 선택</li>
+      </ul>
+      <div class="auto">
+        <button type="button" class="btn btn--dark" id="autoBtn">연석 자동배치</button>
+        <p>빈자리를 눌러 직접 고르거나 자동배치를 누르세요</p>
+      </div>
+      <p class="msg" id="seatMsg" aria-live="polite"></p>
+      <ul class="chips" id="seatChips" aria-label="선택한 좌석"></ul>
+      <button type="button" class="btn btn--primary btn--block seat-done" id="seatDone" disabled>좌석 선택 완료 (0매)</button>
+    </div>
+    <div class="practice">
+      <p><span class="practice__tag">연습 정보</span><span id="seatInfo">-</span></p>
+    </div>
+  </section>
+
+  <section id="scrTicket" aria-labelledby="tkTitle" hidden>
+    <h2 class="scr-title" id="tkTitle">권종을 선택하세요</h2>
+    <p class="scr-sub">할인권은 연습용 예시예요. 좌석마다 따로 고를 수 있어요.</p>
+    <table class="tk">
+      <thead><tr><th scope="col">좌석</th><th scope="col">권종</th><th scope="col">가격</th></tr></thead>
+      <tbody id="tkBody"></tbody>
+    </table>
+    <dl class="sum" id="tkSum"></dl>
+    <div class="btn-row">
+      <button type="button" class="btn" id="tkBack">좌석 다시 선택</button>
+      <button type="button" class="btn btn--primary" id="tkNext">결제하기로 이동</button>
+    </div>
+  </section>
+
+  <section id="scrPay" aria-labelledby="payTitle" hidden>
+    <h2 class="scr-title" id="payTitle">결제 정보를 확인하세요</h2>
+    <p class="scr-sub">연습용 기본값이 채워져 있어요. 실제 결제는 일어나지 않아요.</p>
+    <form id="payForm" novalidate style="margin-top:16px">
+      <div class="two">
+        <div class="field"><label for="payName">예매자 이름</label><input class="input" id="payName" type="text" value="홍길동" autocomplete="off"></div>
+        <div class="field"><label for="payPhone">휴대폰 번호</label><input class="input" id="payPhone" type="text" inputmode="tel" value="010-0000-0000" autocomplete="off"></div>
+      </div>
+      <fieldset>
+        <legend class="legend">결제 수단</legend>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="payMethod" value="card" checked><span>신용·체크카드</span></label>
+          <label class="radio"><input type="radio" name="payMethod" value="easy"><span>간편결제</span></label>
+          <label class="radio"><input type="radio" name="payMethod" value="bank"><span>무통장입금</span></label>
+        </div>
+      </fieldset>
+      <div class="two" id="cardFields">
+        <div class="field"><label for="payCard">카드사</label><select class="select" id="payCard"><option>연습카드</option><option>리허설카드</option><option>테스트카드</option></select></div>
+        <div class="field"><label for="payInst">할부</label><select class="select" id="payInst"><option>일시불</option><option>2개월</option><option>3개월</option></select></div>
+      </div>
+      <fieldset>
+        <legend class="legend">약관 동의</legend>
+        <div class="agree">
+          <label class="check check--all"><input type="checkbox" id="agAll">전체 동의</label>
+          <label class="check"><input type="checkbox" id="agRefund"><span><span class="req">[필수]</span> 취소·환불 규정 동의</span></label>
+          <label class="check"><input type="checkbox" id="agPrivacy"><span><span class="req">[필수]</span> 개인정보 제3자 제공 동의</span></label>
+        </div>
+      </fieldset>
+    </form>
+    <dl class="sum sum--text" id="paySum"></dl>
+    <p class="msg" id="payMsg" aria-live="polite"></p>
+    <div class="btn-row">
+      <button type="button" class="btn" id="payBack">권종 다시 선택</button>
+      <button type="button" class="btn btn--primary" id="paySubmit" disabled>결제하기</button>
+    </div>
+  </section>
+
+  <section class="done" id="scrDone" aria-labelledby="doneTitle" hidden>
+    <span class="status" id="doneBadge" data-tone="good">예매 성공</span>
+    <h2 class="done__title" id="doneTitle" tabindex="-1">예매가 완료되었습니다</h2>
+    <p class="done__no" id="doneNoWrap">예매번호<span class="mono" id="doneNo"></span></p>
+    <p class="done__sub" id="doneSub"></p>
+    <ol class="tl" id="doneTimeline" aria-label="단계별 기록"></ol>
+    <div class="dsum" id="doneSummary"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn--primary" id="doneAgain">다시 연습</button>
+      <button type="button" class="btn" id="doneHistory">예매 내역 보기</button>
+    </div>
+    <p class="kbd-hint"><kbd>Enter</kbd> 또는 <kbd>R</kbd> 키로도 바로 다시 연습할 수 있어요</p>
+  </section>
+
+  <section id="scrHistory" aria-labelledby="histTitle" hidden>
+    <h2 class="scr-title" id="histTitle">예매 내역</h2>
+    <p class="scr-sub">이 브라우저에만 저장돼요. 연습용이라 취소해도 수수료가 없어요.</p>
+    <div class="hist" id="historyList"></div>
+  </section>
+
+      </div>
+    </section>
+
+    <section class="box" aria-labelledby="resultTitle">
+      <h2 class="box__title" id="resultTitle">결과</h2>
+      <p class="result-line" id="resultLine" aria-live="polite">「연습 시작」을 누르면 카운트다운이 시작돼요.</p>
+      <dl class="stats">
+        <div><dt>최고 반응</dt><dd id="statBest">-</dd></div>
+        <div><dt>평균 (최근 10회)</dt><dd id="statAvg">-</dd></div>
+        <div><dt>예매 완료</dt><dd id="statDone">0건</dd></div>
+        <div><dt>실패</dt><dd id="statFail">0건</dd></div>
+      </dl>
+    </section>
+
+    <section class="box" aria-labelledby="logTitle">
+      <h2 class="box__title" id="logTitle">기록</h2>
+      <ol class="log" id="logList"></ol>
+    </section>
+  </div>
+
+  <aside class="panel" id="panel" aria-labelledby="panelTitle">
+    <button type="button" class="panel__toggle" id="panelToggle" aria-expanded="true" aria-controls="panelBody">연습 설정 접기</button>
+    <div class="panel__body" id="panelBody">
+  <h2 class="panel__title" id="panelTitle">연습 설정</h2>
+  <p class="panel__lead">바꾼 값은 다음 연습부터 적용돼요. 희망 매수와 결제 실패 확률은 진행 중에도 바로 반영돼요.</p>
+  <section class="opt">
+    <h3 class="opt__title" id="optPreset">시나리오 프리셋</h3>
+    <div class="seg" id="segPreset" role="group" aria-labelledby="optPreset"></div>
+    <p class="opt__help" id="presetNote"></p>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optJump">단계 바로가기</h3>
+    <div class="seg" id="segJump" role="group" aria-labelledby="optJump"></div>
+    <p class="opt__help">앞 단계는 통과한 것으로 가정해요(반응 40~80ms, 대기순서 1,500~4,000번 중 임의).</p>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optOpen">오픈 연습</h3>
+    <div class="seg" id="segOpen" role="group" aria-labelledby="optOpen" style="--cols:3"></div>
+    <div style="margin-top:10px">
+      <div class="field"><label for="openAtInput">지정 오픈 시각</label><input class="input" id="openAtInput" type="time" step="1" value="18:00:00"></div>
+      <div class="field"><label for="offsetInput">서버 - PC 차이 (초)</label><input class="input" id="offsetInput" type="number" step="0.1" value="0"></div>
+    </div>
+    <p class="opt__help">서버시간 확인 사이트에서 예매처 서버가 내 PC보다 몇 초 빠른지 보고, 빠르면 +, 느리면 - 값으로 적어 주세요. 서버시간은 PC 시간에 이 차이를 더한 값이에요.</p>
+    <div class="start-row">
+      <button type="button" class="btn btn--dark" id="openStart">시작</button>
+      <p class="pc-clock">PC 시계<time id="pcClock">--:--:--</time></p>
+    </div>
+    <p class="opt__lock" id="openLock" hidden>카운트다운 중에는 오픈 방식과 프리셋을 바꿀 수 없어요.</p>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optStadium">구장</h3>
+    <div class="seg" id="segStadium" role="group" aria-labelledby="optStadium"></div>
+    <p class="opt__lock" id="stadiumLock" hidden>연습이 진행 중일 때는 구장을 바꿀 수 없어요.</p>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optScale">대기열 규모</h3>
+    <div class="seg" id="segScale" role="group" aria-labelledby="optScale"></div>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optCrowd">접속자 몰림</h3>
+    <div class="seg" id="segCrowd" role="group" aria-labelledby="optCrowd"></div>
+    <p class="opt__help">켜면 접속 중 화면이 길어지고, 드물게 접속 오류가 나요.</p>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optQty">내 희망 매수 (인당 최대 4매)</h3>
+    <div class="seg" id="segQty" role="group" aria-labelledby="optQty" style="--cols:4"></div>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optSpeed">대기 진행 속도</h3>
+    <div class="seg" id="segSpeed" role="group" aria-labelledby="optSpeed"></div>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optLimit">좌석 선택·결제 제한시간</h3>
+    <div class="seg" id="segLimit" role="group" aria-labelledby="optLimit" style="--cols:3"></div>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optFail">결제 실패 확률</h3>
+    <div class="seg" id="segFail" role="group" aria-labelledby="optFail" style="--cols:3"></div>
+  </section>
+  <section class="opt">
+    <h3 class="opt__title" id="optJudge">판정 기준 안내</h3>
+    <ul class="notes judge" id="judgeList"></ul>
+  </section>
+    </div>
+  </aside>
+</main>
+
+<div class="ov" id="overlay" hidden>
+  <div class="ov__box" id="ovBox" role="dialog" aria-modal="true" aria-labelledby="ovTitle" aria-describedby="ovText" tabindex="-1">
+    <span class="spin" id="ovSpin" aria-hidden="true"></span>
+    <span class="ov__alert" id="ovAlert" aria-hidden="true" hidden>!</span>
+    <p class="ov__title" id="ovTitle" aria-live="polite">접속 중입니다</p>
+    <p class="ov__text" id="ovText">잠시만 기다려 주세요. 새로고침하지 마세요.</p>
+    <button type="button" class="btn btn--primary btn--block ov__retry" id="ovRetry" hidden>다시 시도</button>
+  </div>
+</div>
+</div>
+<script>
+(function () {
+'use strict';
+
+/* 1. 고정 데이터 */
+const VERSION = '2.0.0-clean (2026-10-19)';
+const GAME = { title: '[연습] 2026 KBO 포스트시즌 한국시리즈 1차전', date: '2026.10.31 (토) 14:00' };
+const FEE = 1000;          // 1매당 예매 수수료
+const SALE_RATIO = 0.76;   // 총 좌석 중 일반 예매 판매분
+const ZONES = [
+  { code: 1, name: '중앙 테이블석', share: 0.04, pop: 1.6, price: 90000 },
+  { code: 2, name: '1루 내야 지정석', share: 0.22, pop: 1.35, price: 50000 },
+  { code: 3, name: '3루 내야 지정석', share: 0.22, pop: 1.15, price: 50000 },
+  { code: 4, name: '1루 내야 상단석', share: 0.14, pop: 0.95, price: 35000 },
+  { code: 5, name: '3루 내야 상단석', share: 0.14, pop: 0.85, price: 35000 },
+  { code: 6, name: '1루 외야석', share: 0.12, pop: 0.75, price: 25000 },
+  { code: 7, name: '3루 외야석', share: 0.12, pop: 0.65, price: 25000 }
+];
+const ZONE_TINT = [1, 0.82, 0.68, 0.54, 0.44, 0.34, 0.26];
+const STADIUMS = [
+  { id: 'jamsil', name: '잠실야구장', seats: 23750 },
+  { id: 'daegu', name: '대구 라이온즈파크', seats: 24000 },
+  { id: 'suwon', name: '수원 kt 위즈파크', seats: 18700 },
+  { id: 'gwangju', name: '광주 챔피언스필드', seats: 20500 }
+];
+const SCALES = [
+  { value: 20000, label: '연습용', sub: '2만' },
+  { value: 80000, label: '정규시즌 인기', sub: '8만' },
+  { value: 125000, label: '와일드카드', sub: '12.5만' },
+  { value: 180000, label: '준플레이오프', sub: '18만' },
+  { value: 250000, label: '플레이오프', sub: '25만' },
+  { value: 500000, label: '한국시리즈', sub: '50만' }
+];
+const OPEN_MODES = [
+  { value: 's5', label: '5초', sub: '카운트다운', sec: 5, name: '5초 카운트다운' },
+  { value: 's3', label: '3초', sec: 3, name: '3초 카운트다운' },
+  { value: 's15', label: '15초', sec: 15, name: '15초 카운트다운' },
+  { value: 'minute', label: '다음 정각', sub: ':00초', name: '다음 정각' },
+  { value: 'at', label: '지정 시각', name: '지정 시각' }
+];
+const LIMITS = [
+  { value: 600, label: '10분', sub: '실제', text: '10분' },
+  { value: 180, label: '3분', text: '3분' },
+  { value: 60, label: '60초', text: '60초' }
+];
+const SPEEDS = [{ value: 1, label: '실제 속도', sub: '초당 400명 입장' }, { value: 10, label: '10배 빠르게', sub: '대기만 빨라져요' }];
+const CROWD = [{ value: true, label: '켜기' }, { value: false, label: '끄기' }];
+const QTYS = [1, 2, 3, 4].map(n => ({ value: n, label: n + '매' }));
+const FAILS = [{ value: 0, label: '0%' }, { value: 0.3, label: '30%' }, { value: 1, label: '100%' }];
+const PRESETS = [
+  { id: 'quick', label: '빠른 리허설', note: '5초 카운트다운 · 접속자 몰림 켬 · 대기 10배 속도 · 제한 3분 · 결제 실패 0% · 규모 18만', values: { openMode: 's5', crowd: true, speed: 10, limit: 180, failRate: 0, scale: 180000 } },
+  { id: 'real', label: '실전 그대로', note: '대기 실제 속도 · 제한 10분 · 그 밖의 값은 빠른 리허설과 같아요', values: { openMode: 's5', crowd: true, speed: 1, limit: 600, failRate: 0, scale: 180000 } },
+  { id: 'soldout', label: '매진 체험', note: '3초 카운트다운 · 한국시리즈급 50만 규모라 대부분 차례 전에 매진돼요', values: { openMode: 's3', crowd: true, speed: 10, limit: 180, failRate: 0, scale: 500000 } },
+  { id: 'payfail', label: '결제 실패 체험', note: '3초 카운트다운 · 결제 실패 100%라 승인 실패와 재시도를 겪어 봐요', values: { openMode: 's3', crowd: true, speed: 10, limit: 180, failRate: 1, scale: 180000 } }
+];
+const JUMPS = [{ value: 'queue', label: '대기열부터' }, { value: 'captcha', label: '보안문자부터' }, { value: 'seats', label: '좌석 선택부터' }, { value: 'pay', label: '결제부터' }];
+const TICKETS = [{ id: 'normal', label: '일반', rate: 1 }, { id: 'discount', label: '할인권 (20%)', rate: 0.8 }];
+const METHODS = { card: '신용·체크카드', easy: '간편결제', bank: '무통장입금' };
+const STORE_KEY = 'rehearsal.v2.bookings';
+const CAP_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';           // I·O 제외
+const NO_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';    // I·O·0·1 제외
+// 두벌식 자판: 한글 자모 → 같은 자리의 영문 키
+const KEY_CHO = 'r R s e E f a q Q t T d w W c z x v g'.split(' ');
+const KEY_JUNG = 'k o i O j p u P h hk ho hl y n nj np nl b m ml l'.split(' ');
+const KEY_JONG = [''].concat('r R rt s sw sg e f fr fa fq ft fx fv fg a q qt t T d w c z x v g'.split(' '));
+// 호환 자모(ㄱ U+3131 ~ ㅣ U+3163): 자음 30개 뒤에 모음 21개
+const KEY_JAMO = 'r R rt s sw sg e E f fr fa fq ft fx fv fg a q Q qt t T d w W c z x v g'.split(' ').concat(KEY_JUNG);
+const FAIL_INFO = {
+  queue: { step: 1, title: '차례가 오기 전에 매진됐어요', sub: '반응을 조금 더 줄이거나 대기열 규모를 낮춰 보세요. 처음부터 끝까지 연습하려면 「연습용 2만」이나 단계 바로가기가 좋아요.' },
+  captcha: { step: 2, title: '입력하는 사이 남은 좌석이 모두 팔렸어요', sub: '보안문자는 한글 모드로 쳐도 그대로 입력돼요. 자판을 확인하지 말고 바로 치는 연습을 해 보세요.' },
+  seats: { step: 3, title: '좌석을 고르는 사이 남은 좌석이 모두 팔렸어요', sub: '구역을 오래 고르지 말고, 자동배치나 눈에 보이는 빈자리부터 먼저 잡는 연습을 해 보세요.' },
+  timeout: { step: 0, title: '제한시간이 지나 예매가 종료됐어요', sub: '좌석 선택부터 결제까지 정해진 시간 안에 끝내야 해요. 결제 수단과 동의 항목을 미리 정해 두면 빨라져요.' }
+};
+
+/* 2. 작은 도구 */
+const $ = id => document.getElementById(id);
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const pad2 = n => String(n).padStart(2, '0');
+const comma = n => Math.round(n).toLocaleString('ko-KR');
+const won = n => comma(n) + '원';
+const sec1 = ms => (Math.max(0, ms) / 1000).toFixed(1) + '초';
+const rcText = i => (Math.floor(i / 14) + 1) + '열 ' + (i % 14 + 1) + '번';
+function randn() { let u = 0; while (u === 0) u = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random()); }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function hms(ms) { const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds()); }
+function dateText(ms) { const d = new Date(ms); return d.getFullYear() + '.' + pad2(d.getMonth() + 1) + '.' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function countdownText(sec) {
+  const s = Math.max(0, Math.ceil(sec)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
+  return h ? h + ':' + pad2(m) + ':' + pad2(r) : pad2(m) + ':' + pad2(r);
+}
+function minSec(sec) { const s = Math.max(0, Math.round(sec)); return Math.floor(s / 60) + '분 ' + (s % 60) + '초'; }
+function approx(n) { const v = Math.max(0, Math.round(n)); return v >= 100 ? comma(Math.round(v / 10) * 10) : String(v); }
+function topPct(rank, N) { const p = rank / N * 100; return p < 1 ? p.toFixed(2) : p.toFixed(1); }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function parseTime(str) {
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(str || '');
+  return m ? [clamp(+m[1], 0, 23), clamp(+m[2], 0, 59), clamp(+(m[3] || 0), 0, 59)] : [18, 0, 0];
+}
+function fillDl(dl, rows) {
+  dl.textContent = '';
+  for (const row of rows) { const d = el('div', row[2] || ''); d.append(el('dt', '', row[0]), el('dd', '', row[1])); dl.appendChild(d); }
+}
+
+/* 3. 타이머 관리(모든 타이머를 이곳에서 만들고 정리) */
+const timers = (function () {
+  const list = new Map();
+  function clear(name) {
+    const e = list.get(name); if (!e) return;
+    if (e.kind === 'i') clearInterval(e.id); else if (e.kind === 't') clearTimeout(e.id); else cancelAnimationFrame(e.id);
+    list.delete(name);
+  }
+  return {
+    interval(name, fn, ms, keep) { clear(name); list.set(name, { kind: 'i', id: setInterval(fn, ms), keep: !!keep }); },
+    timeout(name, fn, ms) {
+      clear(name);
+      const entry = { kind: 't', id: 0 };
+      entry.id = setTimeout(() => { if (list.get(name) === entry) list.delete(name); fn(); }, ms);
+      list.set(name, entry);
+    },
+    frame(name, fn) {
+      clear(name);
+      const entry = { kind: 'f', id: 0 };
+      const loop = t => {
+        if (list.get(name) !== entry) return;
+        if (fn(t) === false) { if (list.get(name) === entry) list.delete(name); return; }
+        if (list.get(name) === entry) entry.id = requestAnimationFrame(loop);
+      };
+      entry.id = requestAnimationFrame(loop);
+      list.set(name, entry);
+    },
+    has: name => list.has(name),
+    clear,
+    clearRun() { for (const [name, e] of Array.from(list)) if (!e.keep) clear(name); }
+  };
+})();
+
+/* 4. 설정 */
+const settings = { openMode: 's5', openAt: '18:00:00', offset: 0, stadium: 'jamsil', scale: 180000, crowd: true, qty: 2, speed: 10, limit: 180, failRate: 0 };
+const serverNow = () => Date.now() + settings.offset * 1000;
+const currentStadium = () => STADIUMS.find(s => s.id === settings.stadium) || STADIUMS[0];
+const limitText = sec => (LIMITS.find(l => l.value === sec) || LIMITS[1]).text;
+
+/* 5. 시뮬레이션 모델 */
+const MODEL = {
+  baseMs: 12,                       // 내 요청의 기본 지연
+  admitPerSec: 400,                 // 실제 속도 입장 인원
+  skilled: { mu: 100, sd: 55 },     // 박자형 숙련자 반응(정규)
+  normal: { med: 300, sig: 0.35 },  // 보고 누르는 일반 접속자(로그정규, 오른쪽 꼬리)
+  late: { from: 600, mean: 4000 },  // 0.6초 뒤부터 평균 4초 꼬리
+  lat: { med: 75, sig: 0.85 },      // 다른 접속자의 회선·기기 지연(로그정규)
+  normalOfRest: 0.4,                // 숙련자를 뺀 나머지 중 일반 비율
+  buyRate: 0.95,
+  qtyDist: [[1, 0.03], [2, 0.2], [3, 0.07], [4, 0.7]],
+  pairShare: 0.69,                  // 연석으로 먼저 빠지는 판매분 비율
+  singlePer: 1.1,                   // 단석 구간 1명당 매수
+  drainPair: 150,                   // 보안문자·좌석 중 초당 소진(연석 구간)
+  drainSingle: 40                   // 보안문자·좌석 중 초당 소진(단석 구간)
+};
+function erf(x) {
+  const s = x < 0 ? -1 : 1, a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
+  return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
+}
+const normCdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+// 회선 지연 분포를 32개 분위수로 나눠 두고 평균으로 합성한다
+const LAT_Q = (function () {
+  const q = [];
+  for (let k = 0; k < 32; k++) {
+    const p = (k + 0.5) / 32; let lo = -6, hi = 6;
+    for (let i = 0; i < 48; i++) { const m = (lo + hi) / 2; if (normCdf(m) < p) lo = m; else hi = m; }
+    q.push(MODEL.lat.med * Math.exp(MODEL.lat.sig * (lo + hi) / 2));
+  }
+  return q;
+})();
+const PAIR_MEAN = MODEL.buyRate * MODEL.qtyDist.reduce((a, d) => a + d[0] * d[1], 0);
+function scaleT(N, a, b) { return clamp(Math.log(N / a) / Math.log(b / a), 0, 1); }
+// 규모별 집단 비율(숙련자 2만 25% · 18만 33% · 50만 45%)
+function crowdMix(N) {
+  const s = N <= 180000 ? 0.25 + 0.08 * scaleT(N, 20000, 180000) : 0.33 + 0.12 * scaleT(N, 180000, 500000);
+  return { skilled: s, normal: (1 - s) * MODEL.normalOfRest, late: (1 - s) * (1 - MODEL.normalOfRest) };
+}
+// 서버 도착 시각 x(ms)보다 먼저 도착한 접속자 비율
+function crowdCdf(x, N) {
+  const m = crowdMix(N); let fs = 0, fn = 0;
+  for (const L of LAT_Q) {
+    const y = x - MODEL.baseMs - L;
+    fs += normCdf((y - MODEL.skilled.mu) / MODEL.skilled.sd);
+    if (y > 0) fn += normCdf(Math.log(y / MODEL.normal.med) / MODEL.normal.sig);
+  }
+  fs /= LAT_Q.length; fn /= LAT_Q.length;
+  const lx = x - MODEL.baseMs - MODEL.late.from;
+  const fl = lx > 0 ? 1 - Math.exp(-lx / MODEL.late.mean) : 0;
+  return m.skilled * fs + m.normal * fn + m.late * fl;
+}
+// 접속자 몰림: 요청 구간 혼잡 지연(ms), 접속 중 화면 시간(ms), 접속 오류 확률
+function requestJitter(N) { const mean = 2 + 6 * scaleT(N, 20000, 500000); return Math.min(40, -mean * Math.log(1 - Math.random())); }
+function connectDelay(N) {
+  const med = 200 + 500 * scaleT(N, 20000, 500000);
+  let d = med * Math.exp(0.55 * randn());
+  if (Math.random() < 0.06) d += rand(1000, 5000);
+  return clamp(d, 120, 6000);
+}
+const connectErrorRate = N => 0.002 + 0.008 * scaleT(N, 20000, 500000);
+function rankFromArrival(arrivalMs, N) {
+  const p = crowdCdf(arrivalMs, N), others = N - 1;
+  const ahead = clamp(Math.round(others * p + Math.sqrt(others * p * (1 - p)) * randn()), 0, others);
+  return Math.min(N, ahead + 1 + randInt(0, 40));
+}
+const saleSeats = total => Math.round(total * SALE_RATIO);
+function seatLimits(total) {
+  const S = saleSeats(total), pair = S * MODEL.pairShare / PAIR_MEAN;
+  return { S, pair, all: pair + S * (1 - MODEL.pairShare) / MODEL.singlePer };
+}
+// 판매분 좌석 풀: 입장자 단위 소진과 시간 단위 소진
+function makeSeatPool(total) {
+  const S = saleSeats(total);
+  return {
+    S, left: S, served: 0, singleLine: S * (1 - MODEL.pairShare),
+    isSingle() { return this.left <= this.singleLine; },
+    admit(k) {
+      for (let i = 0; i < k && this.left > 0; i++) {
+        let take = 0;
+        if (this.left > this.singleLine) {
+          if (Math.random() < MODEL.buyRate) {
+            let r = Math.random();
+            for (const d of MODEL.qtyDist) { r -= d[1]; if (r <= 0) { take = d[0]; break; } }
+            if (!take) take = 4;
+          }
+        } else take = Math.random() < MODEL.singlePer - 1 ? 2 : 1;
+        this.left = Math.max(0, this.left - take);
+        this.served++;
+      }
+      return this.left <= 0;
+    },
+    drain(sec) {
+      const rate = this.isSingle() ? MODEL.drainSingle : MODEL.drainPair;
+      this.left = Math.max(0, this.left - rate * sec * rand(0.8, 1.2));
+    }
+  };
+}
+// 구역별 잔여: 인기도가 높을수록 먼저 빠진다
+function zoneLeft(pool) {
+  const q = pool.left / pool.S;
+  const raw = ZONES.map(z => z.share * Math.pow(q, z.pop));
+  const sum = raw.reduce((a, b) => a + b, 0) || 1;
+  return ZONES.map((z, i) => Math.min(Math.floor(pool.S * z.share), Math.floor(pool.left * raw[i] / sum)));
+}
+// 디버그: 반응 ms · 대기열 규모 · 구장 총 좌석으로 대기순서 한 번 뽑기
+function sampleRank(ms, crowdN, seatsTotal) {
+  const N = crowdN || 180000, total = seatsTotal || 23750;
+  const arrival = ms + MODEL.baseMs + requestJitter(N);
+  const rank = rankFromArrival(arrival, N);
+  const pool = makeSeatPool(total);
+  const soldOut = pool.admit(rank - 1);
+  return {
+    rank, total: N, arrivalMs: Math.round(arrival * 10) / 10, topPercent: +topPct(rank, N),
+    passed: !soldOut, seatsLeft: Math.round(pool.left),
+    phase: soldOut ? 'soldout' : (pool.isSingle() ? 'single' : 'pair'),
+    aheadAtSoldOut: soldOut ? rank - 1 - pool.served : 0
+  };
+}
+
+/* 6. 화면 요소 */
+const D = {};
+document.querySelectorAll('#app [id]').forEach(node => { D[node.id] = node; });
+const SCREENS = { home: 'scrHome', queue: 'scrQueue', captcha: 'scrCaptcha', seats: 'scrSeats', ticket: 'scrTicket', pay: 'scrPay', done: 'scrDone', history: 'scrHistory' };
+const STAGE_SCREEN = { idle: 'home', countdown: 'home', open: 'home', connect: 'home', queue: 'queue', captcha: 'captcha', seats: 'seats', ticket: 'ticket', pay: 'pay', done: 'done' };
+const STAGE_STEP = { queue: 1, captcha: 2, seats: 3, ticket: 4, pay: 4 };
+
+/* 7. 진행 상태 */
+function blankRun() {
+  const st = currentStadium();
+  return {
+    stage: 'idle', N: settings.scale, total: st.seats, venue: st.name,
+    openServer: 0, openPerf: 0, enabledAt: 0, shownAt: 0, preClicks: 0,
+    reactMs: null, clickPerf: 0, jitter: 0, crowdOn: settings.crowd, arrivalMs: null, connectFails: 0,
+    pool: null, rank: 0, rankFirst: 0, rankNow: 0, refreshed: false, qSim: 0, qLast: 0, qSlow: 1, qBase: 0, qMinUntil: 0,
+    entryLeft: null, aheadAtSoldOut: 0,
+    capCode: '', capStart: 0, capEnd: 0, capWrong: 0, capLeft0: 0, capSold: 0,
+    seatStart: 0, seatEnd: 0, seatZone: '', limitStart: 0, limitSec: settings.limit, drainLast: 0,
+    block: null, picks: [], collisions: 0,
+    paying: false, payEnd: 0, payFails: 0,
+    endPerf: 0, result: '', failKey: '', failStep: 0, bookingNo: '', shortcut: ''
+  };
+}
+let run = blankRun();
+let view = 'book';
+let shownScreen = '';
+let composing = false;
+let submitAfterCompose = false;
+let pendingCancel = '';
+const session = { reactions: [], done: 0, fail: 0 };
+const logs = [];
+const bookings = loadBookings();
+const runActive = () => run.stage !== 'idle' && run.stage !== 'done';
+
+/* 8. 예매 내역 저장 */
+function loadBookings() {
+  try {
+    const raw = window.localStorage.getItem(STORE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter(b => b && typeof b.no === 'string' && Array.isArray(b.seats)) : [];
+  } catch (e) { return []; }
+}
+function saveBookings() {
+  try { window.localStorage.setItem(STORE_KEY, JSON.stringify(bookings)); } catch (e) { /* 저장할 수 없는 환경이면 이번 화면에서만 유지 */ }
+}
+
+/* 9. 결과·기록 상자 */
+function setResult(text, tone) { D.resultLine.textContent = text; D.resultLine.dataset.tone = tone || ''; }
+function addLog(text, tone) {
+  logs.unshift({ time: hms(serverNow()), text, tone: tone || '' });
+  if (logs.length > 80) logs.length = 80;
+  renderLog();
+}
+function renderLog() {
+  D.logList.textContent = '';
+  if (!logs.length) { D.logList.appendChild(el('li', 'log__empty', '아직 기록이 없어요. 연습을 시작하면 여기에 쌓여요.')); return; }
+  const frag = document.createDocumentFragment();
+  for (const item of logs) { const li = el('li'); li.dataset.tone = item.tone; li.append(el('time', '', item.time), el('span', '', item.text)); frag.appendChild(li); }
+  D.logList.appendChild(frag);
+}
+function judge(ms) {
+  if (ms <= 150) return { label: '빠름', tone: 'good' };
+  if (ms <= 300) return { label: '보통', tone: 'warn' };
+  return { label: '늦음', tone: 'bad' };
+}
+function renderStats() {
+  const r = session.reactions, last = r.slice(-10);
+  D.statBest.textContent = r.length ? Math.min.apply(null, r) + ' ms' : '-';
+  D.statAvg.textContent = last.length ? Math.round(last.reduce((a, b) => a + b, 0) / last.length) + ' ms' : '-';
+  D.statDone.textContent = session.done + '건';
+  D.statFail.textContent = session.fail + '건';
+}
+
+/* 10. 공통 화면 그리기 */
+function revealSite() {
+  const r = D.site.getBoundingClientRect();
+  if (r.top < D.topBar.offsetHeight || r.top > window.innerHeight * 0.55) D.site.scrollIntoView({ block: 'start' });
+}
+function render() {
+  const name = view === 'history' ? 'history' : STAGE_SCREEN[run.stage];
+  if (name !== shownScreen) {
+    shownScreen = name;
+    for (const key in SCREENS) D[SCREENS[key]].hidden = key !== name;
+    revealSite();
+  }
+  if (view === 'history') { D.navHistory.setAttribute('aria-current', 'page'); D.navBook.removeAttribute('aria-current'); }
+  else { D.navBook.setAttribute('aria-current', 'page'); D.navHistory.removeAttribute('aria-current'); }
+  renderSteps();
+  D.limitBar.hidden = !(run.stage === 'seats' || run.stage === 'ticket' || run.stage === 'pay');
+  renderHome();
+  if (name === 'history') renderHistory();
+  renderNavCount();
+  refreshPanel();
+}
+function renderSteps() {
+  const items = D.steps.children;
+  let cur = STAGE_STEP[run.stage] || 0, failAt = 0;
+  if (run.stage === 'done') { cur = 5; failAt = run.result === 'fail' ? run.failStep : 0; }
+  for (let i = 0; i < items.length; i++) {
+    const n = i + 1, li = items[i];
+    let state = '';
+    if (cur) {
+      if (n === failAt) state = 'fail';
+      else if (n < cur && (!failAt || n < failAt)) state = 'done';
+      else if (n === cur) state = 'current';
+    }
+    li.dataset.state = state;
+    li.firstElementChild.textContent = state === 'done' ? '✓' : String(n);
+    if (state === 'current') li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+  }
+}
+function renderNavCount() { D.navCount.textContent = String(bookings.filter(b => b.status !== 'canceled').length); }
+function showOverlay(kind) {
+  const err = kind === 'error';
+  D.ovSpin.hidden = err; D.ovAlert.hidden = !err; D.ovRetry.hidden = !err;
+  if (kind === 'pay') { D.ovTitle.textContent = '결제 승인 요청 중'; D.ovText.textContent = '창을 닫거나 새로고침하지 마세요'; }
+  else if (err) { D.ovTitle.textContent = '접속자가 많아 연결이 지연되고 있어요'; D.ovText.textContent = '잠시 후 다시 시도해 주세요.'; }
+  else { D.ovTitle.textContent = '접속 중입니다'; D.ovText.textContent = '잠시만 기다려 주세요. 새로고침하지 마세요.'; }
+  D.overlay.hidden = false;
+  (err ? D.ovRetry : D.ovBox).focus({ preventScroll: true });
+}
+function hideOverlay() { D.overlay.hidden = true; }
+
+/* 11. 화면 1 · 상품(홈)과 카운트다운 */
+function renderHome() {
+  const st = run.stage;
+  D.homeVenue.textContent = runActive() ? run.venue : currentStadium().name;
+  if (st === 'countdown') D.homeOpen.textContent = '서버시간 ' + hms(run.openServer) + ' 오픈 예정';
+  else if (st === 'open' || st === 'connect') D.homeOpen.textContent = '서버시간 ' + hms(run.openServer) + ' 오픈 · 지금 예매할 수 있어요';
+  else D.homeOpen.textContent = '연습 시작을 누르면 카운트다운이 시작돼요';
+  const on = st === 'open' || st === 'connect';
+  D.buyBtn.classList.toggle('is-on', on);
+  D.buyBtn.classList.toggle('is-count', st === 'countdown');
+  D.buyBtn.setAttribute('aria-disabled', String(st !== 'open'));
+  if (st === 'countdown') {
+    D.buyLabel.textContent = '남은시간';
+    D.buyNum.hidden = false;
+    D.buyNum.textContent = countdownText((run.openPerf - performance.now()) / 1000);
+  } else {
+    D.buyNum.hidden = true;
+    D.buyLabel.textContent = on ? '예매하기' : '판매 예정입니다';
+  }
+}
+function resetRun() {
+  timers.clearRun();
+  hideOverlay();
+  run = blankRun();
+  view = 'book';
+  composing = false;
+  pendingCancel = '';
+  D.capMsg.textContent = ''; D.seatMsg.textContent = ''; D.payMsg.textContent = '';
+  D.agAll.checked = D.agRefund.checked = D.agPrivacy.checked = false;
+}
+function startPractice() {
+  resetRun();
+  const now = serverNow();
+  const mode = OPEN_MODES.find(m => m.value === settings.openMode) || OPEN_MODES[0];
+  let target;
+  if (mode.sec) target = now + mode.sec * 1000 + rand(0, 400);   // 박자를 외우지 못하게 0~0.4초 임의 지연
+  else if (mode.value === 'minute') { target = Math.ceil(now / 60000) * 60000; if (target - now < 3000) target += 60000; }
+  else {
+    const t = parseTime(settings.openAt), d = new Date(now);
+    d.setHours(t[0], t[1], t[2], 0);
+    target = d.getTime();
+    if (target <= now) target += 86400000;
+  }
+  run.stage = 'countdown';
+  run.openServer = target;
+  run.openPerf = performance.now() + (target - now);
+  timers.timeout('open', openSale, Math.max(0, target - now));
+  timers.frame('countdown', tickCountdown);
+  addLog('연습 시작 · 서버시간 ' + hms(target) + ' 오픈 (' + mode.name + ')');
+  setResult('카운트다운이 시작됐어요. 버튼이 파랗게 바뀌는 순간 누르세요.', '');
+  render();
+  revealSite();
+}
+function tickCountdown() {
+  if (run.stage !== 'countdown') return false;
+  const remain = run.openPerf - performance.now();
+  if (remain <= 0) { openSale(); return false; }
+  const txt = countdownText(remain / 1000);
+  if (D.buyNum.textContent !== txt) D.buyNum.textContent = txt;
+  return true;
+}
+function openSale() {
+  if (run.stage !== 'countdown') return;
+  timers.clear('open'); timers.clear('countdown');
+  run.stage = 'open';
+  run.enabledAt = performance.now();
+  run.shownAt = run.enabledAt;
+  renderHome();
+  refreshPanel();
+  // 버튼이 실제로 그려지는 프레임을 기준점으로 삼는다
+  // (프레임이 늦게 오는 환경에서도 기준점이 두 프레임(34ms) 넘게 밀리지 않게 한다)
+  timers.frame('painted', () => { if (run.stage === 'open') run.shownAt = Math.min(performance.now(), run.enabledAt + 34); return false; });
+}
+function pressBuy(t) {
+  if (run.stage === 'countdown') { run.preClicks++; return; }
+  if (run.stage === 'idle' || run.stage === 'done') { setResult('먼저 「연습 시작」을 눌러 카운트다운을 시작하세요.', ''); return; }
+  if (run.stage !== 'open') return;
+  timers.clear('painted');
+  const ref = t >= run.shownAt ? run.shownAt : run.enabledAt;
+  run.reactMs = Math.max(0, Math.round(t - ref));
+  run.clickPerf = t;
+  run.stage = 'connect';
+  run.crowdOn = settings.crowd;
+  run.N = settings.scale;
+  run.jitter = run.crowdOn ? requestJitter(run.N) : 0;
+  run.arrivalMs = run.reactMs + MODEL.baseMs + run.jitter;
+  session.reactions.push(run.reactMs);
+  const j = judge(run.reactMs);
+  addLog('반응 ' + run.reactMs + ' ms · ' + j.label + (run.preClicks ? ' · 오픈 전 연타 ' + run.preClicks + '회' : ''), j.tone);
+  setResult('반응 ' + run.reactMs + ' ms, ' + j.label + '. 서버에 접속하고 있어요.', j.tone);
+  renderStats();
+  renderHome();
+  startConnect();
+}
+function startConnect() {
+  const fail = run.crowdOn && Math.random() < connectErrorRate(run.N);
+  const wait = fail ? rand(1500, 4500) : (run.crowdOn ? connectDelay(run.N) : rand(120, 280));
+  const began = performance.now();
+  showOverlay('connect');
+  timers.timeout('connect', () => {
+    if (fail) {
+      run.connectFails++;
+      addLog('서버 오류 · ' + sec1(performance.now() - began) + ' 기다린 뒤 연결 실패', 'bad');
+      setResult('접속 오류가 났어요. 「다시 시도」를 누르면 그만큼 늦게 도착한 것으로 계산돼요.', 'bad');
+      showOverlay('error');
+    } else {
+      hideOverlay();
+      enterQueue(rankFromArrival(run.arrivalMs, run.N));
+    }
+  }, wait);
+}
+function retryConnect() {
+  if (run.stage !== 'connect') return;
+  // 오류 뒤 다시 시도: 처음 누른 뒤 흐른 시간만큼 서버 도착이 늦어진다
+  run.arrivalMs = run.reactMs + MODEL.baseMs + run.jitter + (performance.now() - run.clickPerf);
+  startConnect();
+}
+
+/* 12. 화면 2 · 대기열 */
+function enterQueue(rank) {
+  run.stage = 'queue';
+  run.rank = rank; run.rankNow = rank;
+  if (!run.rankFirst) run.rankFirst = rank;
+  run.pool = makeSeatPool(run.total);
+  run.qSim = 0; run.qBase = 0; run.qLast = performance.now(); run.qMinUntil = run.qLast + 2000;
+  // 순번이 아주 앞이면 화면이 스쳐 지나가지 않도록 최소 2.4초 동안 보여 준다
+  const need = Math.min(rank - 1, seatLimits(run.total).all);
+  const realSec = need / (MODEL.admitPerSec * settings.speed);
+  run.qSlow = realSec > 0 && realSec < 2.4 ? realSec / 2.4 : 1;
+  D.qProduct.textContent = '[연습] ' + run.venue + ' · 포스트시즌 대비';
+  timers.interval('queue', tickQueue, 100);
+  render();
+  renderQueue();
+}
+function tickQueue() {
+  const now = performance.now();
+  run.qSim += (now - run.qLast) * settings.speed * run.qSlow;
+  run.qLast = now;
+  const target = Math.min(run.rank - 1, Math.floor(MODEL.admitPerSec * run.qSim / 1000));
+  if (target > run.pool.served) run.pool.admit(target - run.pool.served);
+  if (run.pool.left <= 0) {
+    run.aheadAtSoldOut = Math.max(0, run.rank - 1 - run.pool.served);
+    renderQueue();
+    addLog('차례 전 매진 · 내 앞 대기 ' + comma(run.aheadAtSoldOut) + '명', 'bad');
+    finish(false, 'queue');
+    return;
+  }
+  if (run.pool.served >= run.rank - 1 && now >= run.qMinUntil) {
+    timers.clear('queue');
+    run.entryLeft = run.pool.left;
+    addLog('대기열 통과 · ' + comma(run.rankNow) + '번 · 입장 시 남은 약 ' + approx(run.entryLeft) + '석', 'good');
+    setResult('대기열을 통과했어요. 보안문자를 입력하세요.', 'good');
+    enterCaptcha();
+    return;
+  }
+  renderQueue();
+}
+function renderQueue() {
+  const p = run.pool, ahead = Math.max(0, run.rank - 1 - p.served);
+  D.qRank.textContent = comma(ahead + 1);
+  const span = run.rank - 1 - run.qBase;
+  const prog = span > 0 ? clamp((p.served - run.qBase) / span, 0, 1) : 1;
+  D.qDot.style.left = (prog * 100).toFixed(2) + '%';
+  D.qFill.style.width = (prog * 100).toFixed(2) + '%';
+  D.qWaiting.textContent = comma(Math.max(0, run.N - p.served)) + '명';
+  D.qRate.textContent = ((p.S - p.left) / p.S * 100).toFixed(1) + '%';
+  D.qInfoWait.textContent = '예상 대기 ' + minSec(ahead / MODEL.admitPerSec) + ' · 남은 좌석 약 ' + approx(p.left) + '석';
+  D.qInfoMe.textContent = run.refreshed
+    ? '새로고침으로 맨 뒤에서 다시 대기 중'
+    : '내 반응 ' + run.reactMs + ' ms · 서버 도착 오픈 후 ' + (run.arrivalMs / 1000).toFixed(3) + '초 · 전체 ' + comma(run.N) + '명 중 상위 ' + topPct(run.rankFirst, run.N) + '%';
+}
+function refreshQueue() {
+  if (run.stage !== 'queue') return;
+  const p = run.pool;
+  const before = Math.max(1, run.rank - p.served);
+  const after = Math.max(before, Math.round(Math.max(1, run.N - p.served) * rand(0.92, 1)));
+  run.rank = p.served + after; run.rankNow = after; run.refreshed = true; run.qSlow = 1; run.qBase = p.served;
+  addLog('새로고침 · 대기순서 ' + comma(before) + '번 → ' + comma(after) + '번', 'bad');
+  setResult('새로고침해서 대기순서가 ' + comma(after) + '번으로 밀렸어요. 실제 예매에서는 누르지 마세요.', 'bad');
+  renderQueue();
+}
+
+/* 13. 화면 3 · 보안문자 */
+function toKeys(str) {
+  let out = '';
+  for (const ch of str) {
+    const c = ch.charCodeAt(0);
+    if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) out += ch;
+    else if (c >= 0xAC00 && c <= 0xD7A3) { const i = c - 0xAC00; out += KEY_CHO[Math.floor(i / 588)] + KEY_JUNG[Math.floor((i % 588) / 28)] + KEY_JONG[i % 28]; }
+    else if (c >= 0x3131 && c <= 0x3163) out += KEY_JAMO[c - 0x3131];
+  }
+  return out.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+}
+function drawCaptcha(code) {
+  const cv = D.capCanvas, W = 300, H = 90, dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext('2d'); if (!g) return;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#f3f4f6'); bg.addColorStop(1, '#eef3ff');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 170; i++) {
+    g.fillStyle = 'rgba(' + randInt(20, 120) + ',' + randInt(40, 120) + ',' + randInt(90, 210) + ',' + rand(0.15, 0.5).toFixed(2) + ')';
+    g.beginPath(); g.arc(rand(0, W), rand(0, H), rand(0.6, 1.8), 0, Math.PI * 2); g.fill();
+  }
+  const fonts = ['600 40px "Inter",sans-serif', '600 37px "Geist Mono",monospace', 'bold 40px Georgia,serif', '600 41px "Noto Sans KR",sans-serif'];
+  const colors = ['#111827', '#124eeb', '#3d3d3d', '#0f42c9', '#1f2937'];
+  const step = (W - 36) / 6;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < code.length; i++) {
+    g.save();
+    g.translate(18 + step * (i + 0.5) + rand(-3, 3), H / 2 + rand(-9, 9));
+    g.rotate(rand(-0.38, 0.38));
+    g.font = pick(fonts); g.fillStyle = pick(colors);
+    g.fillText(code[i], 0, 0);
+    g.restore();
+  }
+  const lines = randInt(1, 2);
+  for (let k = 0; k < lines; k++) {
+    g.beginPath(); g.moveTo(-5, rand(15, H - 15));
+    g.bezierCurveTo(W * 0.3, rand(-10, H + 10), W * 0.7, rand(-10, H + 10), W + 5, rand(15, H - 15));
+    g.lineWidth = rand(1.8, 2.6); g.strokeStyle = k ? 'rgba(17,24,39,.55)' : 'rgba(18,78,235,.6)'; g.stroke();
+  }
+}
+function newCaptcha() {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += pick(CAP_LETTERS);
+  run.capCode = code;
+  drawCaptcha(code);
+  updateCapSubmit();
+}
+function updateCapSubmit() { D.capSubmit.disabled = run.stage !== 'captcha' || toKeys(D.capInput.value).length < 6; }
+function normalizeCap() {
+  if (!composing) { const v = D.capInput.value, k = toKeys(v); if (v !== k) D.capInput.value = k; }
+  updateCapSubmit();
+}
+function renderCapInfo() {
+  if (run.stage !== 'captcha') return;
+  D.capInfo.textContent = '경과 ' + sec1(performance.now() - run.capStart) + ' · 남은 좌석 약 ' + approx(run.pool.left) + '석';
+}
+function startDrain() {
+  if (timers.has('drain')) return;
+  run.drainLast = performance.now();
+  timers.interval('drain', tickDrain, 600);
+}
+function tickDrain() {
+  const now = performance.now(), sec = (now - run.drainLast) / 1000;
+  run.drainLast = now;
+  const wasSingle = run.pool.isSingle();
+  run.pool.drain(sec);
+  if (run.stage === 'captcha') renderCapInfo();
+  else if (run.stage === 'seats') {
+    if (run.pool.left <= 0) { addLog('좌석 선택 중 매진 · 남은 좌석 0석', 'bad'); finish(false, 'seats'); return; }
+    liveSeats(!wasSingle && run.pool.isSingle());
+  }
+}
+function enterCaptcha() {
+  run.stage = 'captcha';
+  run.capStart = performance.now(); run.capLeft0 = run.pool.left; run.capWrong = 0;
+  startDrain();
+  timers.interval('capClock', renderCapInfo, 100);
+  D.capInput.value = ''; D.capMsg.textContent = ''; composing = false;
+  newCaptcha();
+  render();
+  renderCapInfo();
+  try { D.capInput.focus({ preventScroll: true }); } catch (e) { /* 포커스를 줄 수 없는 환경 */ }
+}
+function submitCaptcha() {
+  if (run.stage !== 'captcha') return;
+  composing = false;
+  submitAfterCompose = false;
+  const v = toKeys(D.capInput.value);
+  D.capInput.value = v;
+  if (v.length < 6) { updateCapSubmit(); return; }
+  if (v === run.capCode) {
+    run.capEnd = performance.now();
+    run.capSold = Math.max(0, run.capLeft0 - run.pool.left);
+    timers.clear('capClock');
+    addLog('보안문자 ' + sec1(run.capEnd - run.capStart) + ' · 오답 ' + run.capWrong + '회 · 남은 약 ' + approx(run.pool.left) + '석', 'good');
+    if (run.pool.left <= 0) { addLog('보안문자 입력 중 매진 · 남은 좌석 0석', 'bad'); finish(false, 'captcha'); return; }
+    setResult('보안문자를 통과했어요. 구역을 고르세요.', 'good');
+    enterSeats();
+  } else {
+    run.capWrong++;
+    D.capMsg.dataset.tone = 'bad';
+    D.capMsg.textContent = '문자가 일치하지 않아요. 새 문자로 다시 입력해 주세요.';
+    D.capInput.value = '';
+    newCaptcha();
+    try { D.capInput.focus({ preventScroll: true }); } catch (e) { /* 무시 */ }
+  }
+}
+
+/* 14. 화면 4 · 좌석 선택 */
+const collisionP = holdSec => Math.min(0.6, 0.06 * holdSec / 10);
+function enterSeats() {
+  run.stage = 'seats';
+  const now = performance.now();
+  if (!run.seatStart) run.seatStart = now;
+  if (!run.limitStart) { run.limitStart = now; run.limitSec = settings.limit; timers.interval('limit', tickLimit, 250); }
+  startDrain();
+  run.block = null; run.picks = [];
+  setSeatMsg('', '');
+  D.zoneView.hidden = false; D.blockView.hidden = true;
+  render();
+  renderLimit(); renderZones(); renderSeatInfo();
+}
+function renderLimit() {
+  const remain = run.limitSec - (performance.now() - run.limitStart) / 1000;
+  D.limitTime.textContent = countdownText(remain);
+  D.limitFill.style.width = clamp(remain / run.limitSec * 100, 0, 100).toFixed(2) + '%';
+  D.limitBar.dataset.level = remain <= 10 ? 'bad' : remain <= 30 ? 'warn' : '';
+  return remain;
+}
+function tickLimit() {
+  const remain = renderLimit();
+  if (run.stage === 'seats') renderSeatInfo();
+  if (remain <= 0) { addLog('시간 초과 · 제한시간 ' + limitText(run.limitSec) + ' 경과', 'bad'); finish(false, 'timeout'); }
+}
+function setSeatMsg(text, tone) { D.seatMsg.textContent = text; D.seatMsg.dataset.tone = tone || ''; }
+function buildZoneButtons() {
+  ZONES.forEach((z, i) => {
+    const b = el('button', 'zone'); b.type = 'button';
+    const sw = el('span', 'zone__sw'); sw.style.opacity = String(ZONE_TINT[i]);
+    const main = el('span', 'zone__main'); main.append(el('span', 'zone__name', z.name), el('span', 'zone__left', ''));
+    const bar = el('span', 'zone__bar'); bar.appendChild(el('i'));
+    b.append(sw, main, el('span', 'zone__price', won(z.price)), bar);
+    b.addEventListener('click', () => openBlock(i));
+    D.zoneList.appendChild(b);
+  });
+}
+function renderZones() {
+  const counts = zoneLeft(run.pool), single = run.pool.isSingle();
+  D.seatHeadInfo.textContent = '남은 좌석 약 ' + approx(run.pool.left) + '석 · 희망 ' + settings.qty + '매';
+  D.singleWarn.hidden = !(single && settings.qty >= 2);
+  D.singleWarn.textContent = D.singleWarn.hidden ? '' : '남은 좌석이 적어 붙은 자리가 거의 없어요. ' + settings.qty + '매를 나란히 잡기 어려우니 떨어진 자리라도 빨리 고르세요.';
+  ZONES.forEach((z, i) => {
+    const b = D.zoneList.children[i], n = counts[i], cap = run.pool.S * z.share;
+    const leftText = n <= 0 ? '매진' : '잔여 약 ' + approx(n) + '석';
+    b.disabled = n <= 0;
+    b.querySelector('.zone__left').textContent = leftText;
+    b.querySelector('.zone__bar i').style.width = clamp(n / cap * 100, 0, 100).toFixed(1) + '%';
+    b.setAttribute('aria-label', z.name + ', ' + won(z.price) + ', ' + leftText);
+  });
+}
+function makeBlockSeats(frac, single) {
+  const seats = new Array(140).fill(0);   // 0 판매 완료, 1 빈자리
+  const target = clamp(Math.round(140 * frac), 0, single ? 80 : 140);
+  let free = 0;
+  if (single) {
+    // 단석 구간: 같은 줄에 붙은 빈자리가 생기지 않게 흩뿌린다
+    for (const i of shuffle(Array.from({ length: 140 }, (_, k) => k))) {
+      if (free >= target) break;
+      if (!hasFreeNeighbor(seats, i)) { seats[i] = 1; free++; }
+    }
+  } else {
+    // 연석 구간: 2~7석 묶음으로 남긴다(잔여가 적을수록 드문드문)
+    let guard = 0;
+    while (free < target && guard++ < 800) {
+      const len = Math.min(target - free, pick([1, 2, 2, 3, 3, 4, 4, 5, 6, 7]));
+      const r = randInt(0, 9), s0 = Math.random() < 0.5 ? 0 : 7, start = s0 + randInt(0, 7 - len);
+      for (let c = start; c < start + len; c++) { const i = r * 14 + c; if (!seats[i]) { seats[i] = 1; free++; } }
+    }
+  }
+  return seats;
+}
+function hasFreeNeighbor(seats, i) {
+  const c = i % 14;
+  return (c !== 0 && c !== 7 && seats[i - 1] === 1) || (c !== 6 && c !== 13 && seats[i + 1] === 1);
+}
+function breakPairs(seats, mine) {
+  for (let r = 0; r < 10; r++) {
+    for (const s0 of [0, 7]) {
+      for (let c = s0; c < s0 + 6; c++) {
+        const a = r * 14 + c, b = a + 1;
+        if (seats[a] === 1 && seats[b] === 1 && !mine.has(a) && !mine.has(b)) seats[Math.random() < 0.5 ? a : b] = 0;
+      }
+    }
+  }
+}
+function buildSeatGrid() {
+  const frag = document.createDocumentFragment();
+  for (let r = 0; r < 10; r++) {
+    const lbl = el('span', 'sgrid__row', String(r + 1)); lbl.setAttribute('aria-hidden', 'true'); frag.appendChild(lbl);
+    for (let c = 0; c < 14; c++) {
+      if (c === 7) { const aisle = el('span'); aisle.setAttribute('aria-hidden', 'true'); frag.appendChild(aisle); }
+      const b = el('button', 'seat'); b.type = 'button'; b.dataset.idx = String(r * 14 + c);
+      frag.appendChild(b);
+    }
+  }
+  D.seatGrid.textContent = '';
+  D.seatGrid.appendChild(frag);
+}
+function openBlock(zi) {
+  if (run.stage !== 'seats') return;
+  const z = ZONES[zi], n = zoneLeft(run.pool)[zi];
+  if (n <= 0) return;
+  const factor = rand(0.8, 1.2);
+  run.block = { zi, no: 100 + z.code * 10 + randInt(1, 8), factor, seats: makeBlockSeats(n / (run.pool.S * z.share) * factor, run.pool.isSingle()) };
+  run.picks = [];
+  D.blockTitle.textContent = z.name + ' · ' + run.block.no + '블록';
+  D.blockSub.textContent = won(z.price) + ' · 이 블록 140석';
+  D.zoneView.hidden = true; D.blockView.hidden = false;
+  setSeatMsg('', '');
+  buildSeatGrid();
+  renderBlock(); renderSeatInfo();
+  revealSite();
+}
+function backToZones() {
+  if (run.stage !== 'seats') return;
+  run.block = null; run.picks = [];
+  setSeatMsg('', '');
+  D.zoneView.hidden = false; D.blockView.hidden = true;
+  renderZones(); renderSeatInfo();
+  revealSite();
+}
+function renderBlock() {
+  const b = run.block; if (!b) return;
+  const mine = new Set(run.picks.map(p => p.idx));
+  D.seatGrid.querySelectorAll('.seat').forEach(btn => {
+    const i = +btn.dataset.idx, isMine = mine.has(i), sold = !isMine && b.seats[i] !== 1;
+    btn.classList.toggle('is-mine', isMine);
+    btn.classList.toggle('is-sold', sold);
+    btn.disabled = sold;
+    btn.setAttribute('aria-pressed', String(isMine));
+    btn.setAttribute('aria-label', rcText(i) + (sold ? ', 판매 완료' : isMine ? ', 내 선택' : ', 선택 가능'));
+  });
+  D.blockWarn.hidden = !(run.pool.isSingle() && settings.qty >= 2);
+  D.blockWarn.textContent = D.blockWarn.hidden ? '' : '단석 구간이에요. 붙은 빈자리가 없어서 ' + settings.qty + '매를 나란히 잡을 수 없어요. 떨어진 자리를 하나씩 고르세요.';
+  D.seatChips.textContent = '';
+  if (!run.picks.length) D.seatChips.appendChild(el('li', 'chips__empty', '아직 고른 좌석이 없어요'));
+  for (const p of run.picks) D.seatChips.appendChild(el('li', '', b.no + '블록 ' + rcText(p.idx)));
+  D.seatDone.textContent = '좌석 선택 완료 (' + run.picks.length + '매)';
+  D.seatDone.disabled = run.picks.length === 0;
+}
+function renderSeatInfo() {
+  if (run.stage !== 'seats') return;
+  let txt = '좌석 화면 ' + sec1(performance.now() - run.seatStart) + ' · 남은 좌석 약 ' + approx(run.pool.left) + '석 (' + (run.pool.isSingle() ? '단석' : '연석') + ' 구간)';
+  if (run.picks.length) {
+    const hold = (performance.now() - Math.min.apply(null, run.picks.map(p => p.at))) / 1000;
+    txt += ' · 좌석 보유 ' + Math.floor(hold) + '초, 뺏길 확률 약 ' + Math.round(collisionP(hold) * 100) + '%';
+  }
+  D.seatInfo.textContent = txt;
+}
+// 0.6초마다: 구역 잔여 갱신, 보고 있는 블록의 빈자리 일부 판매
+function liveSeats() {
+  renderZones();
+  const b = run.block;
+  if (b) {
+    const z = ZONES[b.zi], n = zoneLeft(run.pool)[b.zi];
+    const mine = new Set(run.picks.map(p => p.idx));
+    const free = [];
+    for (let i = 0; i < 140; i++) if (b.seats[i] === 1 && !mine.has(i)) free.push(i);
+    const target = n <= 0 ? 0 : Math.round(140 * n / (run.pool.S * z.share) * b.factor);
+    let sell = free.length - target;
+    if (sell <= 0 && free.length && n > 0 && Math.random() < 0.3) sell = 1;
+    shuffle(free);
+    for (let k = 0; k < sell && k < free.length; k++) b.seats[free[k]] = 0;
+    if (run.pool.isSingle()) breakPairs(b.seats, mine);
+    renderBlock();
+  }
+  renderSeatInfo();
+}
+function toggleSeat(idx) {
+  const b = run.block; if (!b || run.stage !== 'seats') return;
+  const k = run.picks.findIndex(p => p.idx === idx);
+  if (k >= 0) run.picks.splice(k, 1);
+  else {
+    if (b.seats[idx] !== 1) return;
+    if (run.picks.length >= settings.qty) { setSeatMsg('희망 매수(' + settings.qty + '매)까지만 고를 수 있어요. 다른 자리를 고르려면 고른 좌석을 한 번 더 눌러 해제하세요.', 'warn'); return; }
+    run.picks.push({ idx, at: performance.now(), type: 'normal' });
+  }
+  setSeatMsg('', '');
+  renderBlock(); renderSeatInfo();
+}
+// 연석 자동배치: 가운데 열부터 바깥으로, 통로를 넘지 않는 연석
+function autoPlace(silent) {
+  const b = run.block; if (!b || run.stage !== 'seats') return false;
+  const n = settings.qty;
+  const old = new Map(run.picks.map(p => [p.idx, p]));
+  const usable = i => b.seats[i] === 1 || old.has(i);
+  for (const r of [4, 5, 3, 6, 2, 7, 1, 8, 0, 9]) {
+    const starts = [];
+    for (const s0 of [0, 7]) {
+      for (let s = s0; s + n <= s0 + 7; s++) {
+        let ok = true;
+        for (let c = s; c < s + n; c++) if (!usable(r * 14 + c)) { ok = false; break; }
+        if (ok) starts.push(s);
+      }
+    }
+    if (!starts.length) continue;
+    starts.sort((a, c) => Math.abs(a + (n - 1) / 2 - 6.5) - Math.abs(c + (n - 1) / 2 - 6.5));
+    const s = starts[0], now = performance.now();
+    run.picks = [];
+    for (let c = s; c < s + n; c++) { const i = r * 14 + c, prev = old.get(i); run.picks.push({ idx: i, at: prev ? prev.at : now, type: prev ? prev.type : 'normal' }); }
+    if (!silent) setSeatMsg((r + 1) + '열 ' + (n > 1 ? (s + 1) + '~' + (s + n) + '번 ' + n + '자리를' : (s + 1) + '번을') + ' 잡았어요. 바로 완료를 누르세요.', 'good');
+    renderBlock(); renderSeatInfo();
+    return true;
+  }
+  if (!silent) setSeatMsg('이 블록에는 ' + n + '자리 붙은 좌석이 없어요', 'warn');
+  return false;
+}
+function fillAnySeats() {
+  const b = run.block, now = performance.now();
+  for (const r of [4, 5, 3, 6, 2, 7, 1, 8, 0, 9]) {
+    for (let c = 0; c < 14 && run.picks.length < settings.qty; c++) {
+      const i = r * 14 + c;
+      if (b.seats[i] === 1 && !run.picks.some(p => p.idx === i)) run.picks.push({ idx: i, at: now, type: 'normal' });
+    }
+  }
+  renderBlock();
+}
+function seatDone() {
+  if (run.stage !== 'seats' || !run.block || !run.picks.length) return;
+  const now = performance.now();
+  const hold = (now - Math.min.apply(null, run.picks.map(p => p.at))) / 1000;
+  if (Math.random() < collisionP(hold)) {
+    const lost = run.picks.splice(randInt(0, run.picks.length - 1), 1)[0];
+    run.block.seats[lost.idx] = 0;
+    run.collisions++;
+    setSeatMsg('이미 선택된 좌석이 포함되어 있어요 (' + rcText(lost.idx) + '). 다른 좌석을 다시 선택해 주세요.', 'bad');
+    addLog('좌석 충돌 · ' + run.block.no + '블록 ' + rcText(lost.idx) + ' (' + Math.floor(hold) + '초 보유)', 'bad');
+    setResult('고른 좌석 하나를 다른 사람이 먼저 결제했어요. 좌석은 고르자마자 바로 완료하세요.', 'bad');
+    renderBlock(); renderSeatInfo();
+    return;
+  }
+  run.seatEnd = now;
+  run.seatZone = ZONES[run.block.zi].name + ' · ' + run.block.no + '블록';
+  addLog('좌석 선택 ' + sec1(now - run.seatStart) + ' · ' + ZONES[run.block.zi].name + ' · ' + run.picks.length + '매', 'good');
+  setResult('좌석을 잡았어요. 권종을 고르고 결제로 넘어가세요.', 'good');
+  enterTicket();
+}
+
+/* 15. 화면 5 · 권종 */
+const seatName = p => ZONES[run.block.zi].name + ' ' + run.block.no + '블록 ' + rcText(p.idx);
+function seatPrice(p) { const t = TICKETS.find(x => x.id === p.type) || TICKETS[0]; return Math.round(ZONES[run.block.zi].price * t.rate); }
+function totals() {
+  const tickets = run.picks.reduce((a, p) => a + seatPrice(p), 0), fee = run.picks.length * FEE;
+  return { tickets, fee, total: tickets + fee };
+}
+function enterTicket() { run.stage = 'ticket'; render(); renderTicket(); }
+function renderTicket() {
+  D.tkBody.textContent = '';
+  run.picks.forEach((p, i) => {
+    const tr = el('tr'), sel = el('select', 'select'), price = el('td', '', won(seatPrice(p)));
+    sel.setAttribute('aria-label', (i + 1) + '번째 좌석 권종');
+    TICKETS.forEach(t => { const o = el('option', '', t.label); o.value = t.id; o.selected = t.id === p.type; sel.appendChild(o); });
+    sel.addEventListener('change', () => { p.type = sel.value; price.textContent = won(seatPrice(p)); renderTicketSum(); });
+    const cell = el('td'); cell.appendChild(sel);
+    tr.append(el('td', '', seatName(p)), cell, price);
+    D.tkBody.appendChild(tr);
+  });
+  renderTicketSum();
+}
+function renderTicketSum() {
+  const t = totals();
+  fillDl(D.tkSum, [
+    ['티켓 금액', won(t.tickets)],
+    ['예매 수수료 (' + run.picks.length + '매 × 1,000원)', won(t.fee)],
+    ['배송 · 모바일 티켓', '0원'],
+    ['총 결제 금액', won(t.total), 'is-total']
+  ]);
+}
+
+/* 16. 화면 6 · 결제 */
+function payMethod() { const r = D.payForm.querySelector('input[name="payMethod"]:checked'); return r ? r.value : 'card'; }
+function methodText() { const m = payMethod(); return m === 'card' ? METHODS.card + ' (' + D.payCard.value + ' · ' + D.payInst.value + ')' : METHODS[m]; }
+function enterPay() { run.stage = 'pay'; run.paying = false; D.payMsg.textContent = ''; render(); renderPay(); }
+function renderPay() {
+  D.cardFields.hidden = payMethod() !== 'card';
+  fillDl(D.paySum, [
+    ['경기', GAME.title + ' · ' + run.venue],
+    ['좌석', run.picks.map(seatName).join(', ')],
+    ['결제 수단', methodText()],
+    ['결제 금액', won(totals().total), 'is-total']
+  ]);
+  validatePay();
+}
+function validatePay() {
+  const agreed = D.agRefund.checked && D.agPrivacy.checked;
+  D.agAll.checked = agreed;
+  D.paySubmit.disabled = run.paying || !(D.payName.value.trim() && D.payPhone.value.trim() && agreed);
+}
+function submitPay() {
+  if (run.stage !== 'pay' || run.paying || D.paySubmit.disabled) return;
+  run.paying = true;
+  D.payMsg.textContent = '';
+  validatePay();
+  showOverlay('pay');
+  timers.timeout('pay', () => {
+    hideOverlay();
+    run.paying = false;
+    if (Math.random() < settings.failRate) {
+      run.payFails++;
+      D.payMsg.dataset.tone = 'bad';
+      D.payMsg.textContent = '카드사 승인에 실패했어요 (연습용 오류). 결제 수단을 확인하고 다시 시도해 주세요.';
+      addLog('결제 실패 · 승인 거절 (' + run.payFails + '회째)', 'bad');
+      setResult('결제가 실패했어요. 제한시간 안에 다시 시도하세요.', 'bad');
+      validatePay();
+    } else completeBooking();
+  }, rand(1200, 2500));
+}
+function makeBookingNo() {
+  const d = new Date(serverNow());
+  let s = '';
+  for (let i = 0; i < 6; i++) s += pick(NO_LETTERS);
+  return 'R' + String(d.getFullYear()).slice(2) + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + s;
+}
+function completeBooking() {
+  run.payEnd = performance.now();
+  const t = totals(), no = makeBookingNo(), counts = {};
+  run.picks.forEach(p => { const lb = (TICKETS.find(x => x.id === p.type) || TICKETS[0]).label; counts[lb] = (counts[lb] || 0) + 1; });
+  bookings.unshift({
+    no, status: 'done', title: GAME.title, venue: run.venue, seats: run.picks.map(seatName),
+    tickets: Object.keys(counts).map(k => k + ' ' + counts[k] + '매').join(' · '),
+    method: methodText(), amount: t.total, at: serverNow()
+  });
+  saveBookings();
+  run.bookingNo = no;
+  addLog('예매 완료 · ' + no + ' · ' + run.picks.length + '매 · ' + won(t.total) + ' · 총 ' + sec1(run.payEnd - run.shownAt), 'good');
+  setResult('예매 성공! 예매번호 ' + no + ', 오픈부터 ' + sec1(run.payEnd - run.shownAt) + ' 걸렸어요.', 'good');
+  finish(true, '');
+}
+
+/* 17. 화면 7 · 완료 */
+function finish(ok, key) {
+  const prev = run.stage;
+  timers.clearRun();
+  hideOverlay();
+  run.endPerf = performance.now();
+  run.result = ok ? 'success' : 'fail';
+  run.failKey = key;
+  run.failStep = ok ? 0 : (FAIL_INFO[key].step || STAGE_STEP[prev] || 3);
+  run.stage = 'done';
+  if (ok) session.done++;
+  else { session.fail++; setResult(FAIL_INFO[key].title + '.', 'bad'); }
+  view = 'book';
+  render();
+  renderDone();
+  renderStats();
+  try { D.doneTitle.focus({ preventScroll: true }); } catch (e) { /* 무시 */ }
+}
+function failRows() {
+  switch (run.failKey) {
+    case 'queue': return [['사유', '차례 전 매진'], ['매진 때 내 앞 대기', comma(run.aheadAtSoldOut) + '명']];
+    case 'captcha': return [['사유', '보안문자 입력 중 매진'], ['입력하는 동안 팔린 좌석', '약 ' + approx(run.capSold) + '석']];
+    case 'seats': return [['사유', '좌석 선택 중 매진'], ['좌석 화면에 머문 시간', sec1(run.endPerf - run.seatStart)]];
+    default: return [['사유', '제한시간 초과'], ['제한시간', limitText(run.limitSec)]];
+  }
+}
+function renderDone() {
+  const ok = run.result === 'success', assumed = run.shortcut ? ' (가정)' : '';
+  D.doneBadge.textContent = ok ? '예매 성공' : '예매 실패';
+  D.doneBadge.dataset.tone = ok ? 'good' : 'bad';
+  D.doneTitle.textContent = ok ? '예매가 완료되었습니다' : FAIL_INFO[run.failKey].title;
+  D.doneNoWrap.hidden = !ok;
+  D.doneNo.textContent = run.bookingNo;
+  D.doneSub.textContent = ok ? '예매 내역에서 좌석과 결제 정보를 확인할 수 있어요. 연습용이라 실제 결제는 일어나지 않았어요.' : FAIL_INFO[run.failKey].sub;
+  const tl = [
+    ['반응', run.reactMs != null ? run.reactMs + ' ms' : '-'],
+    ['대기열', run.rankFirst ? comma(run.rankFirst) + '번' : '-'],
+    ['보안문자', run.capEnd ? sec1(run.capEnd - run.capStart) : '-'],
+    ['좌석 선택', run.seatEnd ? sec1(run.seatEnd - run.seatStart) : '-'],
+    ['결제', run.payEnd ? sec1(run.payEnd - run.seatEnd) : '-']
+  ];
+  D.doneTimeline.textContent = '';
+  for (const row of tl) { const li = el('li'); li.append(el('span', '', row[0]), el('strong', '', row[1])); D.doneTimeline.appendChild(li); }
+  const j = run.reactMs != null ? judge(run.reactMs) : null;
+  const sections = [
+    ['반응 · 서버 도착', [
+      ['반응', j ? run.reactMs + ' ms · ' + j.label + assumed : '-'],
+      ['서버 도착', run.arrivalMs != null ? '오픈 후 ' + (run.arrivalMs / 1000).toFixed(3) + '초' : '-'],
+      ['오픈 전 연타', run.preClicks + '회'],
+      ['접속 오류', run.connectFails + '회']
+    ]],
+    ['대기열', [
+      ['구장', run.venue],
+      ['나의 대기순서', run.rankFirst ? comma(run.rankFirst) + '번' + assumed + (run.refreshed ? ' → 새로고침 뒤 ' + comma(run.rankNow) + '번' : '') : '-'],
+      ['전체 대비', run.rankFirst ? '전체 ' + comma(run.N) + '명 중 상위 ' + topPct(run.rankFirst, run.N) + '%' : '-'],
+      ['입장 시 남은 좌석', run.entryLeft != null ? '약 ' + approx(run.entryLeft) + '석' : '-']
+    ]],
+    ['보안문자', [
+      ['입력 시간', run.capEnd ? sec1(run.capEnd - run.capStart) + ' · 오답 ' + run.capWrong + '회' : '-'],
+      ['입력 중 팔린 좌석', run.capEnd ? '약 ' + approx(run.capSold) + '석' : '-']
+    ]],
+    ['좌석 선택', [
+      ['고른 시간', run.seatEnd ? sec1(run.seatEnd - run.seatStart) : '-'],
+      ['구역 · 블록', run.seatZone || '-'],
+      ['좌석 충돌', run.collisions + '회']
+    ]],
+    ['결제', [['결제 재시도', run.payFails + '회'], ['결제 수단', ok ? methodText() : '-']]],
+    ['전체', [['오픈부터 ' + (ok ? '완료' : '종료') + '까지', sec1(run.endPerf - run.shownAt)]]]
+  ];
+  if (!ok) sections.push(['실패 사유', failRows(), 'is-bad']);
+  D.doneSummary.textContent = '';
+  for (const sec of sections) {
+    const box = el('section', sec[2] || ''), dl = el('dl');
+    fillDl(dl, sec[1]);
+    box.append(el('h3', '', sec[0]), dl);
+    D.doneSummary.appendChild(box);
+  }
+}
+
+/* 18. 화면 8 · 예매 내역 */
+function renderHistory() {
+  const box = D.historyList;
+  box.textContent = '';
+  if (!bookings.length) { box.appendChild(el('p', 'empty', '아직 예매 내역이 없어요. 연습 시작을 눌러 첫 예매를 완료해 보세요.')); return; }
+  let focusTarget = null;
+  for (const b of bookings) {
+    const canceled = b.status === 'canceled';
+    const card = el('article', 'hcard' + (canceled ? ' is-canceled' : ''));
+    const top = el('div', 'hcard__top'), badge = el('span', 'status', canceled ? '취소됨' : '예매 완료');
+    badge.dataset.tone = canceled ? 'muted' : 'good';
+    top.append(el('span', 'hcard__no', String(b.no)), badge);
+    const seats = el('ul', 'hcard__seats');
+    b.seats.forEach(s => seats.appendChild(el('li', '', String(s))));
+    card.append(top, el('p', 'hcard__title', String(b.title) + ' · ' + String(b.venue)), seats,
+      el('p', 'hcard__meta', [String(b.tickets), String(b.method), won(+b.amount || 0), dateText(+b.at || 0)].join(' · ')));
+    if (!canceled && pendingCancel === b.no) {
+      const cf = el('div', 'confirm'), row = el('div', 'btn-row');
+      const yes = el('button', 'btn btn--dark', '취소 확정'), no = el('button', 'btn', '돌아가기');
+      yes.type = 'button'; no.type = 'button';
+      yes.addEventListener('click', () => cancelBooking(b.no));
+      no.addEventListener('click', () => { pendingCancel = ''; renderHistory(); });
+      row.append(yes, no);
+      cf.append(el('p', '', '정말 취소할까요? 취소 수수료는 연습용이라 없어요.'), row);
+      card.appendChild(cf);
+      focusTarget = yes;
+    } else if (!canceled) {
+      const act = el('div', 'hcard__act'), c = el('button', 'btn', '예매 취소');
+      c.type = 'button';
+      c.addEventListener('click', () => { pendingCancel = b.no; renderHistory(); });
+      act.appendChild(c);
+      card.appendChild(act);
+    }
+    box.appendChild(card);
+  }
+  if (focusTarget) focusTarget.focus({ preventScroll: true });
+}
+function cancelBooking(no) {
+  const b = bookings.find(x => x.no === no);
+  if (!b || b.status === 'canceled') return;
+  b.status = 'canceled';
+  b.canceledAt = serverNow();
+  saveBookings();
+  pendingCancel = '';
+  addLog('예매 취소 · ' + no, 'warn');
+  setResult('예매번호 ' + no + ' 취소를 마쳤어요.', 'warn');
+  renderHistory();
+  renderNavCount();
+}
+
+/* 19. 단계 바로가기 */
+function startShortcut(kind) {
+  resetRun();
+  const jump = JUMPS.find(j => j.value === kind) || JUMPS[2];
+  const react = randInt(40, 80), rank = randInt(1500, 4000);
+  run.shortcut = kind;
+  run.reactMs = react; run.arrivalMs = react + MODEL.baseMs;
+  run.rankFirst = rank; run.rankNow = rank;
+  run.shownAt = performance.now(); run.openServer = serverNow();
+  addLog('바로가기 · ' + jump.label + ' (반응 ' + react + ' ms · 대기순서 ' + comma(rank) + '번으로 가정)');
+  setResult(jump.label + ' 연습을 시작해요. 앞 단계는 통과한 것으로 가정했어요.', '');
+  if (kind === 'queue') { enterQueue(rank); revealSite(); return; }
+  run.pool = makeSeatPool(run.total);
+  run.pool.admit(rank - 1);
+  run.rank = rank;
+  run.entryLeft = run.pool.left;
+  if (kind === 'captcha') { enterCaptcha(); revealSite(); return; }
+  enterSeats();
+  if (kind === 'pay') {
+    const counts = zoneLeft(run.pool);
+    const zi = counts[1] > 0 ? 1 : counts.findIndex(n => n > 0);
+    if (zi >= 0) {
+      openBlock(zi);
+      if (!autoPlace(true)) fillAnySeats();
+      if (run.picks.length) {
+        run.seatEnd = performance.now();
+        run.seatZone = ZONES[run.block.zi].name + ' · ' + run.block.no + '블록';
+        enterPay();
+      }
+    }
+  }
+  revealSite();
+}
+
+/* 20. 연습 설정 패널 */
+const segGroups = [];
+function buildSeg(box, options, opts) {
+  const btns = options.map(o => {
+    const b = el('button', 'seg__btn'); b.type = 'button';
+    b.appendChild(el('span', '', o.label));
+    if (o.sub) b.appendChild(el('small', '', o.sub));
+    b.addEventListener('click', () => { if (opts.locked && opts.locked()) return; opts.pick(o.value); refreshPanel(); });
+    box.appendChild(b);
+    return { b, o };
+  });
+  segGroups.push({ btns, current: opts.current, locked: opts.locked });
+}
+function matchedPreset() {
+  const p = PRESETS.find(x => Object.keys(x.values).every(k => settings[k] === x.values[k]));
+  return p ? p.id : '';
+}
+function applyPreset(id) {
+  const p = PRESETS.find(x => x.id === id); if (!p) return;
+  Object.assign(settings, p.values);
+  addLog('프리셋 · ' + p.label);
+  setResult('「' + p.label + '」 프리셋을 적용했어요. 「연습 시작」을 누르세요.', '');
+}
+function buildPanel() {
+  const counting = () => run.stage === 'countdown';
+  buildSeg(D.segPreset, PRESETS.map(p => ({ value: p.id, label: p.label })), { current: matchedPreset, locked: counting, pick: applyPreset });
+  buildSeg(D.segJump, JUMPS, { pick: startShortcut });
+  buildSeg(D.segOpen, OPEN_MODES, { current: () => settings.openMode, locked: counting, pick: v => { settings.openMode = v; } });
+  buildSeg(D.segStadium, STADIUMS.map(s => ({ value: s.id, label: s.name, sub: comma(s.seats) + '석' })), { current: () => settings.stadium, locked: runActive, pick: v => { settings.stadium = v; } });
+  buildSeg(D.segScale, SCALES, { current: () => settings.scale, pick: v => { settings.scale = v; } });
+  buildSeg(D.segCrowd, CROWD, { current: () => settings.crowd, pick: v => { settings.crowd = v; } });
+  buildSeg(D.segQty, QTYS, { current: () => settings.qty, pick: v => { settings.qty = v; if (run.stage === 'seats') { renderZones(); renderBlock(); } } });
+  buildSeg(D.segSpeed, SPEEDS, { current: () => settings.speed, pick: v => { settings.speed = v; } });
+  buildSeg(D.segLimit, LIMITS, { current: () => settings.limit, pick: v => { settings.limit = v; } });
+  buildSeg(D.segFail, FAILS, { current: () => settings.failRate, pick: v => { settings.failRate = v; } });
+}
+function renderJudge() {
+  const st = currentStadium(), lim = seatLimits(st.seats), r100 = n => comma(Math.round(n / 100) * 100);
+  const items = [
+    ['반응 판정 ', '150ms 이하는 빠름, 151~300ms는 보통, 300ms를 넘으면 늦음으로 표시해요.'],
+    ['오픈 전 클릭 ', '버튼이 아직 비활성이라 예매로 이어지지 않아요. 몇 번 눌렀는지만 기록돼요.'],
+    ['좌석 선택 ', '오래 고를수록 빈자리가 사라지고, 들고 있던 좌석을 다른 사람에게 뺏길 확률도 올라가요(10초당 약 6%, 최대 60%).'],
+    ['대기열 규모 ', '클수록 박자에 맞춰 누르는 숙련자가 앞자리를 채워서, 보통 반응으로는 차례가 오기 전에 매진되기 쉬워요. 처음부터 끝까지 연습하려면 「연습용 2만」을 고르거나 단계 바로가기를 쓰세요.'],
+    ['시뮬레이션 ', '좌석 수와 대기열은 가상이에요. ' + st.name + ' 기준으로 연석은 약 ' + r100(lim.pair) + '명째까지 남고, 완전 매진은 약 ' + r100(lim.all) + '명째에 일어나요.']
+  ];
+  D.judgeList.textContent = '';
+  for (const it of items) { const li = el('li'); li.append(el('b', '', it[0]), document.createTextNode(it[1])); D.judgeList.appendChild(li); }
+}
+function refreshPanel() {
+  for (const g of segGroups) {
+    const cur = g.current ? g.current() : undefined, lock = g.locked ? g.locked() : false;
+    for (const x of g.btns) { if (g.current) x.b.setAttribute('aria-pressed', String(x.o.value === cur)); x.b.disabled = lock; }
+  }
+  const counting = run.stage === 'countdown';
+  D.openAtInput.disabled = counting; D.offsetInput.disabled = counting; D.openLock.hidden = !counting;
+  D.stadiumLock.hidden = !runActive();
+  const p = PRESETS.find(x => x.id === matchedPreset());
+  D.presetNote.textContent = p ? p.note : '직접 바꾼 설정으로 연습 중이에요. 프리셋을 누르면 한 번에 바뀌어요.';
+  const lt = limitText(settings.limit);
+  D.homeLimitNote.textContent = '예매 화면으로 넘어간 뒤 ' + lt + ' 안에 결제를 마치지 않으면 예매가 자동으로 종료돼요.';
+  D.qLimitNote.textContent = '좌석 선택부터 결제까지 ' + lt + ' 안에 마쳐야 해요. 시간이 지나면 예매가 자동으로 종료돼요.';
+  D.homeVenue.textContent = runActive() ? run.venue : currentStadium().name;
+  renderJudge();
+}
+function setPanelOpen(open) {
+  D.panel.classList.toggle('is-collapsed', !open);
+  D.panelToggle.setAttribute('aria-expanded', String(open));
+  D.panelToggle.textContent = open ? '연습 설정 접기' : '연습 설정 펼치기';
+}
+
+/* 21. 포스터(캔버스) */
+function spaced(g, text, x, y, gap) {
+  let cx = x;
+  for (const ch of text) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + gap; }
+  return cx - gap;
+}
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r);
+  g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r);
+  g.lineTo(x + r, y + h); g.arcTo(x, y + h, x, y + h - r, r);
+  g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r);
+  g.closePath();
+}
+function drawPoster() {
+  const cv = D.posterCanvas, W = 380, H = 504, dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext('2d'); if (!g) return;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  const bg = g.createLinearGradient(W, 0, 0, H);
+  bg.addColorStop(0, '#dbe5ff'); bg.addColorStop(0.5, '#eef3ff'); bg.addColorStop(1, '#ffffff');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(18,78,235,0.07)'; g.lineWidth = 1; g.beginPath();
+  for (let x = 19.5; x < W; x += 19) { g.moveTo(x, 0); g.lineTo(x, H); }
+  for (let y = 19.5; y < H; y += 19) { g.moveTo(0, y); g.lineTo(W, y); }
+  g.stroke();
+  // 내야 다이아몬드 선
+  g.save(); g.translate(W * 0.68, H * 0.69); g.rotate(Math.PI / 4);
+  g.strokeStyle = 'rgba(18,78,235,0.22)'; g.lineWidth = 1.25; g.strokeRect(-62, -62, 124, 124);
+  g.strokeStyle = 'rgba(18,78,235,0.10)'; g.strokeRect(-112, -112, 224, 224);
+  g.fillStyle = 'rgba(18,78,235,0.35)';
+  [[-62, -62], [62, -62], [62, 62], [-62, 62]].forEach(p => g.fillRect(p[0] - 4, p[1] - 4, 8, 8));
+  g.restore();
+  const sans = '"Inter","Noto Sans KR",sans-serif', mono = '"Geist Mono",ui-monospace,monospace';
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = '#124eeb'; g.font = '600 13px ' + mono;
+  spaced(g, 'REHEARSAL', 28, 54, 3.2);
+  g.fillStyle = '#000000'; g.font = '600 96px ' + sans;
+  const widest = Math.max(g.measureText('POST').width, g.measureText('SEASON').width);
+  const size = Math.min(96, Math.floor(96 * (W - 50) / widest));
+  g.font = '600 ' + size + 'px ' + sans;
+  spaced(g, 'POST', 24, 86 + size * 0.95, -size * 0.035);
+  spaced(g, 'SEASON', 24, 86 + size * 1.9, -size * 0.035);
+  const label = '2026 · KBO 포스트시즌', py = 86 + size * 1.9 + 24;
+  g.font = '600 15px "Noto Sans KR","Inter",sans-serif';
+  const tw = g.measureText(label).width;
+  roundRect(g, 26, py, tw + 28, 34, 17); g.fillStyle = '#124eeb'; g.fill();
+  g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.fillText(label, 40, py + 17.5);
+  g.textBaseline = 'alphabetic';
+  g.strokeStyle = 'rgba(0,0,0,0.12)'; g.beginPath(); g.moveTo(28, H - 68.5); g.lineTo(W - 28, H - 68.5); g.stroke();
+  g.fillStyle = '#3d3d3d'; g.font = '500 12px ' + mono; g.fillText('GAME 1 · 2026.10.31 14:00', 28, H - 46);
+  g.fillStyle = '#616161'; g.fillText('PRACTICE ONLY · NOT FOR SALE', 28, H - 28);
+}
+
+/* 22. 시계·이벤트 연결·시작 */
+let lastClock = '';
+function tickClock() {
+  const s = hms(serverNow());
+  if (s !== lastClock) { lastClock = s; D.serverClock.textContent = s; D.buyClock.textContent = s; }
+  const p = hms(Date.now());
+  if (D.pcClock.textContent !== p) D.pcClock.textContent = p;
+}
+function syncTopH() { document.documentElement.style.setProperty('--top-h', D.topBar.offsetHeight + 'px'); }
+function bindEvents() {
+  D.topStart.addEventListener('click', startPractice);
+  D.topSeats.addEventListener('click', () => startShortcut('seats'));
+  D.openStart.addEventListener('click', startPractice);
+  D.navBook.addEventListener('click', () => { if (run.stage === 'done') run = blankRun(); view = 'book'; render(); });
+  D.navHistory.addEventListener('click', () => { view = 'history'; pendingCancel = ''; render(); });
+  // 반응 측정: 첫 pointerdown 기준(키보드는 click으로)
+  D.buyBtn.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const now = performance.now();
+    pressBuy(e.timeStamp > 0 && Math.abs(now - e.timeStamp) < 1000 ? e.timeStamp : now);
+  });
+  D.buyBtn.addEventListener('click', e => { if (e.detail === 0) pressBuy(performance.now()); });
+  D.ovRetry.addEventListener('click', retryConnect);
+  D.qRefresh.addEventListener('click', refreshQueue);
+  D.capNew.addEventListener('click', () => {
+    if (run.stage !== 'captcha') return;
+    D.capInput.value = ''; D.capMsg.textContent = '';
+    newCaptcha();
+    D.capInput.focus({ preventScroll: true });
+  });
+  // 한글 IME: 조합 중에는 값을 건드리지 않고 조합이 끝난 뒤 영문 키로 바꾼다
+  D.capInput.addEventListener('compositionstart', () => { composing = true; });
+  D.capInput.addEventListener('compositionend', () => {
+    composing = false;
+    timers.timeout('capNormalize', () => { normalizeCap(); if (submitAfterCompose) submitCaptcha(); }, 0);
+  });
+  D.capInput.addEventListener('input', e => { if (e.isComposing || composing) { updateCapSubmit(); return; } normalizeCap(); });
+  D.capInput.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
+    // 조합 중 Enter는 조합을 끝내는 데 쓰이므로, 조합이 끝난 직후 제출한다
+    if (e.isComposing || composing || e.keyCode === 229) { submitAfterCompose = true; return; }
+    e.preventDefault();
+    submitCaptcha();
+  });
+  D.capSubmit.addEventListener('click', submitCaptcha);
+  D.seatGrid.addEventListener('click', e => { const b = e.target.closest('.seat'); if (b && !b.disabled) toggleSeat(+b.dataset.idx); });
+  D.blockBack.addEventListener('click', backToZones);
+  D.autoBtn.addEventListener('click', () => autoPlace(false));
+  D.seatDone.addEventListener('click', seatDone);
+  D.tkBack.addEventListener('click', () => { if (run.stage === 'ticket') { setResult('좌석을 놓고 다시 고르는 중이에요. 남은 좌석은 계속 줄어들어요.', 'warn'); enterSeats(); } });
+  D.tkNext.addEventListener('click', () => { if (run.stage === 'ticket') enterPay(); });
+  D.payForm.addEventListener('submit', e => e.preventDefault());
+  // 체크박스·라디오는 change에서 처리한다(전체 동의가 필수 항목보다 먼저 되돌려지지 않게)
+  D.payForm.addEventListener('input', e => { if (run.stage === 'pay' && e.target.type !== 'checkbox' && e.target.type !== 'radio') validatePay(); });
+  D.payForm.addEventListener('change', e => {
+    if (e.target === D.agAll) { D.agRefund.checked = D.agPrivacy.checked = D.agAll.checked; }
+    if (run.stage === 'pay') renderPay();
+  });
+  D.payBack.addEventListener('click', () => { if (run.stage === 'pay' && !run.paying) enterTicket(); });
+  D.paySubmit.addEventListener('click', submitPay);
+  D.doneAgain.addEventListener('click', startPractice);
+  D.doneHistory.addEventListener('click', () => { view = 'history'; pendingCancel = ''; render(); });
+  D.panelToggle.addEventListener('click', () => setPanelOpen(D.panel.classList.contains('is-collapsed')));
+  D.openAtInput.addEventListener('change', () => {
+    if (run.stage === 'countdown') return;
+    settings.openAt = D.openAtInput.value || '18:00:00';
+    settings.openMode = 'at';
+    refreshPanel();
+  });
+  D.offsetInput.addEventListener('input', () => {
+    const v = parseFloat(D.offsetInput.value);
+    settings.offset = isFinite(v) ? clamp(v, -3600, 3600) : 0;
+    tickClock();
+  });
+  // 완료 화면: 입력칸에 포커스가 없을 때 Enter 또는 R로 다시 연습
+  document.addEventListener('keydown', e => {
+    if (run.stage !== 'done' || view !== 'book' || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const a = document.activeElement, tag = a ? a.tagName : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (a && a.isContentEditable)) return;
+    if (e.key === 'Enter') { if (tag === 'BUTTON' || tag === 'A') return; e.preventDefault(); startPractice(); }
+    else if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') { e.preventDefault(); startPractice(); }
+  });
+  window.addEventListener('resize', syncTopH);
+  if (document.fonts) {
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', drawPoster);
+    if (document.fonts.ready) document.fonts.ready.then(drawPoster).catch(() => { /* 기본 글꼴로 유지 */ });
+  }
+}
+function buildPrice() {
+  ZONES.forEach((z, i) => {
+    const tr = el('tr'), name = el('td'), sw = el('span', 'sw');
+    sw.style.opacity = String(ZONE_TINT[i]); sw.setAttribute('aria-hidden', 'true');
+    name.append(sw, document.createTextNode(z.name));
+    tr.append(name, el('td', '', won(z.price)));
+    D.priceBody.appendChild(tr);
+  });
+}
+function init() {
+  // 글꼴 CSS는 print로 받아 두었다가 적용: 글꼴 서버가 느려도 화면과 스크립트가 먼저 뜬다
+  const fontCss = $('fontCss');
+  if (fontCss) fontCss.media = 'all';
+  buildPrice();
+  buildZoneButtons();
+  buildPanel();
+  bindEvents();
+  setPanelOpen(!window.matchMedia('(max-width: 1023px)').matches);
+  syncTopH();
+  timers.interval('clock', tickClock, 100, true);
+  tickClock();
+  drawPoster();
+  renderLog();
+  renderStats();
+  render();
+}
+init();
+window.__rehearsal = Object.freeze({ sampleRank, version: VERSION });
+})();
+</script>

@@ -1,0 +1,11 @@
+# 다른 사람의 공개 아티팩트 코드를 기반으로 했던 이전 버전(참고용, 공개하지 않음)
+legacy/
+
+# 영상 녹화 중간 파일과 임시 산출물
+tools/video/out/
+*.frames/
+__pycache__/
+
+# 운영체제 임시 파일
+.DS_Store
+Thumbs.db
