@@ -12,3 +12,7 @@ Thumbs.db
 
 # 참가신청서(개인정보 포함)와 그 PDF 는 공개 저장소에 올리지 않는다
 docs/*application-form*
+
+# 대회 운영 측 기획안 템플릿 원본과 그 양식으로 채운 제출본은 공개 저장소에 올리지 않는다
+tools/plan/template-original.pptx
+docs/*elice-plan-template*
