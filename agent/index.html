@@ -78,6 +78,7 @@ ul.plain li{margin:2px 0}
 .btn--block{width:100%}
 .btn--sm{min-height:34px;font-size:13px;padding:0 10px}
 .btn:disabled,.btn[aria-disabled="true"]{cursor:not-allowed;background:var(--surface-2);border-color:var(--line);color:#9ca3af}
+.btn[aria-pressed="true"]{background:var(--blue-soft);border-color:var(--primary);color:var(--primary-hover);box-shadow:inset 0 0 0 1px var(--primary)}
 .btn--emph{outline:3px solid var(--warn);outline-offset:2px}
 .demo{display:grid;gap:4px}
 .demo .btn{width:100%}
@@ -173,6 +174,23 @@ canvas.cap{width:100%;max-width:240px;height:auto;border:1px solid var(--line);b
 dl.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0;font-size:14px}
 dl.kv dt{color:var(--muted)}
 dl.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cat{appearance:none;text-align:left;border:1px solid var(--line-2);border-radius:var(--r-lg);background:#fff;padding:14px;min-height:84px;display:grid;gap:4px;align-content:start;cursor:pointer;color:#000;font:inherit}
+.cat strong{font-size:16px}
+.cat:hover{border-color:var(--primary);background:var(--blue-soft)}
+.chat{display:grid;gap:10px}
+.bubble{padding:10px 12px;border-radius:var(--r-lg);border:1px solid var(--line);overflow-wrap:anywhere;display:grid;gap:8px;min-width:0}
+.bubble--user{justify-self:end;max-width:85%;background:var(--blue-soft);border-color:var(--blue-line)}
+.bubble--svc{background:var(--surface)}
+.cand{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:10px;display:grid;gap:4px;min-width:0}
+.cand--ended{background:var(--surface);color:var(--text-2)}
+.ended-group{border-top:1px dashed var(--line-2);padding-top:8px}
+.findbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 0 12px;margin-top:12px;z-index:20}
+.findbar__in{display:flex;gap:8px}
+.findbar__in input{flex:1;min-width:0}
+ol.srcs{margin:0;padding-left:20px;display:grid;gap:10px;overflow-wrap:anywhere}
+#pickInfo th{width:30%;white-space:nowrap}
+@media (max-width:480px){#pickInfo th{white-space:normal}}
 .sched{border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;display:grid;gap:6px;background:#fff}
 .sched--today{border:2px solid var(--primary);background:var(--blue-soft)}
 .sched--past,.sched--past .h3,.sched--past .check{color:var(--muted)}
@@ -322,7 +340,7 @@ function cleanNotice(n) {
 }
 /* 날짜 키(YYYY-MM-DD, 브라우저 현지 시각 기준). 일수 차이는 UTC 자정끼리 비교해 서머타임 영향을 받지 않습니다. */
 var KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
-var SOURCES = ['AI 응답', '예시 응답', '직접 입력', '규칙 분석'];
+var SOURCES = ['AI 응답', '예시 응답', '직접 입력', '규칙 분석', '수집 데이터'];
 function dayKey(ms) { var d = new Date(ms); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
 function keyUtc(k) { var a = k.split('-').map(Number); return Date.UTC(a[0], a[1] - 1, a[2]); }
 function keyDiff(a, b) { return Math.round((keyUtc(b) - keyUtc(a)) / 86400000); }
@@ -393,7 +411,9 @@ function cleanGoal(g) {
     expected: typeof g.expected === 'string' ? clip(wellFormed(g.expected), 500) : null,
     whereToCheck: Array.isArray(g.whereToCheck) ? g.whereToCheck.filter(function (x) { return typeof x === 'string'; }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
     sourceUrl: safeHttps(g.sourceUrl), source: SOURCES.indexOf(g.source) >= 0 ? g.source : '직접 입력',
-    exampleId: GOAL_EX_IDS.indexOf(g.exampleId) >= 0 ? g.exampleId : null, savedAt: g.savedAt
+    exampleId: GOAL_EX_IDS.indexOf(g.exampleId) >= 0 ? g.exampleId : null, savedAt: g.savedAt,
+    // 지난 예매 오픈 문장(종료된 예매에서 다음 예매 공지 대기로 저장한 경우)
+    pastOpen: typeof g.pastOpen === 'string' && g.pastOpen.trim() ? clip(wellFormed(g.pastOpen), 200) : null
   };
 }
 var OUTCOME_LABEL = { success: '성공', fail: '실패', skip: '예매하지 않음' };
@@ -418,6 +438,13 @@ function cleanRecords(a) {
     if (r.failStage != null && STAGES.indexOf(r.failStage) < 0) return false;
     if (r.focus != null && FOCUS_OPTIONS.indexOf(r.focus) < 0) return false;
     return true;
+  }).map(function (r) {
+    // 예매 테스트 기록의 행사 이름(경기 포함), 좌석 등급, 매수
+    r.eventName = typeof r.eventName === 'string' ? clip(wellFormed(r.eventName), 120) : null;
+    r.targetTitle = typeof r.targetTitle === 'string' ? clip(wellFormed(r.targetTitle), 120) : null;
+    r.grade = typeof r.grade === 'string' ? clip(wellFormed(r.grade), 100) : null;
+    r.buy = Number.isInteger(r.buy) && r.buy >= 1 && r.buy <= 20 ? r.buy : null;
+    return r;
   }).slice(-50);
 }
 function cleanResponses(a) {
@@ -428,7 +455,37 @@ function cleanResponses(a) {
 }
 function cleanSetting(p) {
   if (!isPlain(p) || QUEUE_SIZES.indexOf(p.queueSize) < 0) return null;
-  return { queueSize: p.queueSize, focus: FOCUS_OPTIONS.indexOf(p.focus) >= 0 ? p.focus : null, source: ['AI 응답', '예시 응답', '예시 응답(규칙 기반)', '직접 입력', '규칙 분석'].indexOf(p.source) >= 0 ? p.source : '직접 입력', fromPlan: !!p.fromPlan };
+  return {
+    queueSize: p.queueSize, focus: FOCUS_OPTIONS.indexOf(p.focus) >= 0 ? p.focus : null, source: ['AI 응답', '예시 응답', '예시 응답(규칙 기반)', '직접 입력', '규칙 분석', '수집 데이터'].indexOf(p.source) >= 0 ? p.source : '직접 입력', fromPlan: !!p.fromPlan, fromTarget: !!p.fromTarget,
+    // 예매 테스트 조건(경기 번호, 좌석 등급, 매수). 목록 안의 값인지는 화면에서 target 과 대조합니다.
+    game: Number.isInteger(p.game) && p.game >= 0 && p.game < 20 ? p.game : null,
+    grade: typeof p.grade === 'string' && p.grade.trim() ? clip(wellFormed(p.grade), 100) : null,
+    buy: Number.isInteger(p.buy) && p.buy >= 1 && p.buy <= 20 ? p.buy : null
+  };
+}
+// 예매 테스트 대상(F2 에서 고른 후보와 연습 조건)
+function cleanTarget(t) {
+  if (!isPlain(t) || typeof t.title !== 'string' || !t.title.trim() || QUEUE_SIZES.indexOf(t.queueSize) < 0 || !Number.isInteger(t.seats) || t.seats < 1 || t.seats > 1000000 || !finNum(t.savedAt)) return null;
+  var grades = Array.isArray(t.grades) ? t.grades.filter(function (g) { return typeof g === 'string' && g.trim(); }).slice(0, 8).map(function (g) { return clip(wellFormed(g), 100); }) : [];
+  return {
+    id: typeof t.id === 'string' ? clip(t.id, 40) : '', title: clip(wellFormed(t.title), 100),
+    category: ['sports', 'musical', 'concert', 'etc'].indexOf(t.category) >= 0 ? t.category : 'etc',
+    venue: typeof t.venue === 'string' ? clip(wellFormed(t.venue), 100) : null,
+    queueSize: t.queueSize, seats: t.seats,
+    limit: Number.isInteger(t.limit) && t.limit >= 1 && t.limit <= 20 ? t.limit : null,
+    grades: grades.length ? grades : ['R석', 'S석', 'A석'], virtual: t.virtual !== false || !grades.length,
+    source: SOURCES.indexOf(t.source) >= 0 ? t.source : '직접 입력', savedAt: t.savedAt,
+    seller: typeof t.seller === 'string' ? clip(wellFormed(t.seller), 100) : null,
+    openText: typeof t.openText === 'string' ? clip(wellFormed(t.openText), 200) : null,
+    games: Array.isArray(t.games) ? t.games.filter(function (g) { return isPlain(g) && typeof g.name === 'string' && g.name.trim(); }).slice(0, 20).map(function (g) {
+      return { name: clip(wellFormed(g.name), 40), venue: typeof g.venue === 'string' ? clip(wellFormed(g.venue), 100) : '' };
+    }) : [],
+    // 다음 예매 공지 대기 저장에 쓰는 값(종료 여부, 확인할 곳, 지난 예매 오픈 문장, 출처 주소)
+    ended: t.ended === true,
+    whereToCheck: Array.isArray(t.whereToCheck) ? t.whereToCheck.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
+    pastOpen: typeof t.pastOpen === 'string' && t.pastOpen.trim() ? clip(wellFormed(t.pastOpen), 200) : null,
+    sourceUrl: safeHttps(t.sourceUrl)
+  };
 }
 var S;
 function loadAll() {
@@ -439,12 +496,13 @@ function loadAll() {
     responses: cleanResponses(load('responses', [])),
     practiceSetting: cleanSetting(load('practiceSetting', null)),
     goal: cleanGoal(load('goal', null)),
-    results: cleanResults(load('results', []))
+    results: cleanResults(load('results', [])),
+    target: cleanTarget(load('target', null))
   };
 }
 function resetStorage() {
-  ['notice', 'plan', 'records', 'responses', 'practiceSetting', 'goal', 'results'].forEach(function (k) { try { window.localStorage.removeItem(PREFIX + k); } catch (e) { /* 저장 불가 */ } });
-  S = { notice: null, plan: null, records: [], responses: [], practiceSetting: null, goal: null, results: [] };
+  ['notice', 'plan', 'records', 'responses', 'practiceSetting', 'goal', 'results', 'target'].forEach(function (k) { try { window.localStorage.removeItem(PREFIX + k); } catch (e) { /* 저장 불가 */ } });
+  S = { notice: null, plan: null, records: [], responses: [], practiceSetting: null, goal: null, results: [], target: null };
 }
 
 /* ---------- 상수 ---------- */
@@ -998,22 +1056,35 @@ function openRealKeeper() {
 }
 
 /* ---------- 라우팅 ---------- */
-var ROUTES = ['home', 'goal', 'notice', 'confirm', 'situation', 'schedule', 'alerts', 'keeper', 'warmup', 'check', 'result', 'coach', 'practice', 'records'];
-var STEP_OF = { goal: 0, notice: 0, confirm: 1, situation: 2, schedule: 2, alerts: 3, keeper: 4, warmup: 5, check: 5, coach: 6 };
-var STEPS = ['목표·공지', '값 확인', '준비 일정', '알림 등록', '지킴이 화면', '워밍업 연습', '코치 리포트'];
-var TITLES = { home: '홈', goal: '목표로 시작', notice: '공지 등록', confirm: '읽은 값 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
+var ROUTES = ['home', 'find', 'pick', 'notice', 'confirm', 'situation', 'schedule', 'alerts', 'keeper', 'warmup', 'check', 'result', 'coach', 'practice', 'records'];
+var STEP_OF = { home: 0, find: 0, pick: 0, notice: 0, confirm: 1, situation: 2, schedule: 2, alerts: 3, keeper: 4, warmup: 5, check: 5, coach: 6 };
+var STEPS = ['예매 찾기', '값 확인', '준비 일정', '알림 등록', '지킴이 화면', '워밍업 연습', '코치 리포트'];
+var TITLES = { home: '홈', find: '예매 찾기', pick: '선택한 예매 정보', notice: '공지 등록', confirm: '읽은 값 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
 var cleanups = [], live = [];
-function route() { var r = (location.hash || '').replace(/^#/, ''); return ROUTES.indexOf(r) >= 0 ? r : 'home'; }
+function route() {
+  var r = (location.hash || '').replace(/^#/, '');
+  if (r === 'goal') return 'find'; // 이전 목표 입력 화면은 예매 찾기로 대체합니다.
+  return ROUTES.indexOf(r) >= 0 ? r : 'home';
+}
+// 예매 테스트 대상(target)이 있으면 4단계 표시를 씁니다. 예매 테스트 진행 중과 결과 요약은 stepOverride 로 3단계를 표시합니다.
+var TARGET_STEPS = ['예매 찾기', '조건 확인', '예매 테스트', '코치 리포트'];
+var TARGET_STEP_OF = { find: 0, pick: 0, practice: 1, coach: 3 };
+var stepOverride = null;
 function renderSteps(r) {
-  var cur = STEP_OF[r];
-  $('#steps').replaceChildren.apply($('#steps'), STEPS.map(function (s, i) {
+  // 예매 테스트 경로의 화면(예매 찾기, 선택한 예매 정보, 조건 확인, 코치 리포트)에서만 4단계 표시를 씁니다. 지킴이, 알림 등록 같은 화면은 target 이 남아 있어도 7단계 표시를 씁니다.
+  var useTarget = !!S.target && TARGET_STEP_OF[r] != null;
+  var list = useTarget ? TARGET_STEPS : STEPS;
+  var cur = useTarget ? (stepOverride != null && r === 'practice' ? stepOverride : TARGET_STEP_OF[r]) : STEP_OF[r];
+  $('#steps').replaceChildren.apply($('#steps'), list.map(function (s, i) {
     return h('li', { 'aria-current': i === cur ? 'step' : null }, h('span', { class: 'no' }, (i + 1) + '. '), s);
   }));
 }
 function render() {
   cleanups.forEach(function (f) { try { f(); } catch (e) { /* 무시 */ } });
   cleanups = []; live = [];
+  if (location.hash === '#goal') { try { history.replaceState(null, '', '#find'); } catch (e) { /* 무시 */ } }
   var r = route();
+  stepOverride = null;
   renderSteps(r);
   var view = $('#view');
   try {
@@ -1039,7 +1110,7 @@ function scrBroken() {
     confirmBox));
 }
 function updateTitle() {
-  var base = TITLES[route()] + ' | Rehearsal Agent';
+  var base = (route() === 'practice' && S.target ? '예매 테스트 조건 확인' : TITLES[route()]) + ' | Rehearsal Agent';
   if (keeperAlerting()) document.title = '[경고] ' + STAGE_NAME[keeper.stage] + ' 예매 응답 필요 | Rehearsal Agent';
   else document.title = base;
 }
@@ -1071,6 +1142,20 @@ function tick() {
 }
 
 /* ---------- S0 홈 ---------- */
+// 행사 이름 비교(공백 제외, 소문자)
+function normEvent(s) { return typeof s === 'string' ? s.replace(/\s+/g, '').toLowerCase() : ''; }
+function sameEvent(a, b) { var x = normEvent(a); return !!x && x === normEvent(b); }
+// 이미 등록한 공지가 다른 공지로 바뀌는 경우의 안내
+function replaceWarn(event, openAt) {
+  var n = S.notice;
+  if (!n || (sameEvent(n.event, event) && n.openAt === openAt)) return null;
+  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 공지(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.');
+}
+function sourceLink(url, isExample) {
+  if (!url) return h('span', { class: 'muted' }, '출처 주소 없음');
+  return h('span', null, h('a', { class: 'any', href: url, target: '_blank', rel: 'noopener noreferrer' }, url), isExample ? [' ', badge('예시', 'info')] : null);
+}
+
 function scrHome() {
   var n = S.notice;
   var card = null;
@@ -1112,30 +1197,30 @@ function scrHome() {
     goalCard = h('section', { class: 'sec', id: 'goalCard' },
       h('h2', { class: 'h2' }, '공지 대기 중인 목표'),
       h('div', { class: 'box stack' },
-        h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, g.event), badge('공지 대기', 'warn'), srcTag(g.source)),
+        h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, g.event), badge('공지 대기', 'warn'), srcTag(g.source === '수집 데이터' ? COLLECT_LABEL : g.source)),
+        g.pastOpen ? h('p', { class: 'small', id: 'goalPastOpen' }, '지난 예매 오픈: ' + g.pastOpen) : null,
         h('dl', { class: 'kv' }, h('dt', null, '예상 시기'), h('dd', null, g.expected || '미확인'),
           h('dt', null, '확인할 곳'), h('dd', null, g.whereToCheck.length ? g.whereToCheck.join(', ') : '미확인')),
         h('div', { class: 'row' },
-          btn('다시 찾기', 'btn--primary', function () { flowDemo = false; goalDraft = { text: g.text, exampleId: g.exampleId, result: null, fromCard: true }; go('goal'); }),
+          // 「다시 찾기」는 예매 찾기를 그 목표 문장으로 엽니다.
+          btn('다시 찾기', 'btn--primary', function () { flowDemo = false; findOpen('etc', { send: g.text, fromCard: true }); }),
           // 대기 카드에서 등록한 공지를 확정하면 그 대기 목표를 지웁니다.
           btn('공지 등록', null, function () { flowDemo = false; resetDraft(true); go('notice'); }),
           btn('삭제', null, function () { goalConfirm.hidden = false; })),
         goalConfirm));
   }
-  var goalIn = h('input', { type: 'text', id: 'homeGoal', maxlength: 200, placeholder: '예: 한국시리즈 예매에 성공하고 싶습니다' });
-  function startGoal() { flowDemo = false; goalDraft = { text: clip(goalIn.value.trim(), 200), exampleId: null, result: null }; go('goal'); }
-  goalIn.addEventListener('keydown', function (e) {
-    if (e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Enter 무시
-    if (e.key === 'Enter') { e.preventDefault(); startGoal(); }
+  var cats = CAT_IDS.map(function (id) {
+    return h('button', { type: 'button', class: 'cat', id: 'cat-' + id, onclick: function () { flowDemo = false; findOpen(id); } },
+      h('strong', null, CAT[id].label), h('span', { class: 'small muted' }, CAT[id].desc));
   });
   return h('div', null,
     h('section', { class: 'sec' },
-      h('h1', { class: 'h1' }, '예매 오픈을 놓치지 않게 알리고 미리 연습시킵니다'),
-      h('div', { class: 'box box--soft stack', style: 'margin-top:12px' },
-        field('목표로 시작', goalIn, '목표만 적으면 AI 가 예매 일정을 찾고 남은 기간의 준비 일정을 작성합니다.'),
-        btn('예매 일정 찾기', 'btn--primary btn--block', startGoal)),
-      h('p', { class: 'lead' }, '예매 공지를 이미 가지고 있으면 공지를 등록합니다. 오픈 10분 전부터 지킴이 화면이 알리고, 같은 조건으로 워밍업 연습을 진행하고, 연습 기록을 분석합니다.'),
-      h('div', { class: 'grid3', style: 'margin-top:10px' },
+      h('h1', { class: 'h1' }, '무엇을 예매하시나요?'),
+      h('p', { class: 'lead' }, '분야를 고르면 예매 정보를 찾아 보여 주고, 예매 테스트와 오픈 알림 준비로 이어집니다.'),
+      h('div', { class: 'cats', style: 'margin-top:12px' }, cats)),
+    h('section', { class: 'sec' },
+      h('p', { class: 'small muted' }, '예매 공지를 이미 가지고 있으면 공지를 등록합니다. 오픈 10분 전부터 지킴이 화면이 알리고, 같은 조건으로 워밍업 연습을 진행하고, 연습 기록을 분석합니다.'),
+      h('div', { class: 'grid3', style: 'margin-top:8px' },
         btn('공지 등록', null, function () { flowDemo = false; if (draft.fromGoalCard || draft.fromGoal) resetDraft(false); go('notice'); }),
         btn('바로 연습', null, function () { go('practice'); }),
         btn('내 기록', null, function () { go('records'); }))),
@@ -1147,147 +1232,487 @@ function scrHome() {
           btn('10분 전 알림 시연', 'btn--primary btn--big', function () { startDemo(exampleInfo()); }),
           h('p', { class: 'small muted' }, '약 2분 소요. 예시 공지로 경고 1단계부터 3단계, 오픈, 종료까지 줄인 시간으로 진행합니다. 소리가 납니다.')),
         h('div', { class: 'demo' },
-          btn('전체 흐름 시연', null, function () { flowDemo = true; goalDraft = { text: EX_GOAL.announced.text, exampleId: 'announced', result: null }; go('goal'); }),
-          h('p', { class: 'small muted' }, '약 5분 소요. 예시 목표를 채운 목표 입력부터 예매 일정 찾기, 값 확인, 준비 일정, 알림 등록, 지킴이 화면, 코치 리포트까지 진행합니다.')))),
+          btn('전체 흐름 시연', null, function () { flowDemo = true; findOpen('etc', { demo: true }); }),
+          h('p', { class: 'small muted' }, '약 5분 소요. 예시 문장으로 예매 찾기를 시작해 선택한 예매 정보, 값 확인, 준비 일정, 알림 등록, 지킴이 화면, 코치 리포트까지 진행합니다.')))),
     card,
     h('section', { class: 'sec' },
       h('h2', { class: 'h2' }, '서비스 구성'),
       h('ul', { class: 'plain' },
+        h('li', null, '찾기: 분야를 고르면 수집 데이터와 AI 웹 검색으로 예매 정보를 찾습니다.'),
         h('li', null, '알림: 오픈 10분 전부터 지킴이 화면, 브라우저, 캘린더가 알림을 겹쳐 보내고, 휴대폰 알람 시각을 함께 안내합니다.'),
         h('li', null, '연습: 알림에 응답하면 공지 조건으로 구성한 워밍업 연습이 바로 열립니다.'),
         h('li', null, '코치: 연습 기록을 분석해 약점 단계와 다음 연습 설정을 제시합니다.')),
-      h('p', { class: 'small muted', style: 'margin-top:8px' }, '모든 화면은 가상 시뮬레이션입니다. 실제 예매처에 접속하거나 결제하지 않습니다.')));
+      h('p', { class: 'small muted', style: 'margin-top:8px' }, '모든 연습 화면은 가상 시뮬레이션입니다. 실제 예매처에 접속하거나 결제하지 않습니다.')));
 }
 
-/* ---------- G1 목표 입력 ---------- */
-var goalDraft = { text: '', exampleId: null, result: null };
-var GOAL_FORMAT = '{\n  "event": "행사 이름",\n  "status": "announced | not_announced | ended",\n  "openAt": "2026-11-20T14:00:00+09:00 또는 null",\n  "seller": "예매처 이름 또는 null",\n  "sourceUrl": "근거 페이지 주소 또는 null",\n  "evidence": "근거 문장 원문 또는 null",\n  "expected": "공지 전이면 예상 시기와 근거, 아니면 null",\n  "whereToCheck": ["공지를 확인할 곳"],\n  "notes": "선예매, 1인 구매 한도 등 참고 사항 또는 null"\n}';
-function goalPrompt() {
-  return ['아래 목표에 맞는 행사의 예매 일정을 찾아 주세요.', '',
-    '오늘 날짜: ' + kstToday() + ', 한국 시간', '', '규칙',
+/* ---------- 수집 데이터(2026-11-16 수집). 주소, 날짜, 근거 문장은 원문 그대로입니다. ---------- */
+var COLLECT_DATE = '2026-11-16';
+var COLLECT_LABEL = '수집 데이터 2026-11-16';
+var CAT = {
+  sports: { label: '스포츠 예매', desc: '프로야구, 프로축구 등' },
+  musical: { label: '뮤지컬 예매', desc: '진행 중인 공연에서 선택' },
+  concert: { label: '콘서트 예매', desc: '예정된 공연에서 선택' },
+  etc: { label: '기타', desc: '찾는 예매를 직접 입력' }
+};
+var CAT_IDS = ['sports', 'musical', 'concert', 'etc'];
+var STATUS_LABEL = { upcoming: '오픈 예정', on_sale: '예매 중', not_announced: '공지 전', ended: '종료' };
+var STATUS_KIND = { upcoming: 'info', on_sale: 'good', not_announced: 'warn', ended: 'bad' };
+var DEFAULT_PRACTICE = { queueSize: 80000, seats: 20000, limit: 4, grades: ['R석', 'S석', 'A석'], virtual: true };
+function collectedShow(id, category, title, venue, start, end, url, prices) {
+  return {
+    id: id, category: category, title: title, status: 'on_sale', period: start + ' ~ ' + end, endDate: end, venue: venue,
+    seller: 'NOL 티켓', sellerUrl: url, openAt: null, openText: null, limit: null, grades: prices || null, method: null, notes: null,
+    source: '수집 데이터', sources: [{ name: 'NOL 티켓 예매 페이지', date: COLLECT_DATE, url: url, evidence: null }],
+    practice: prices ? { queueSize: 80000, seats: 20000, limit: 4, grades: ['R석', 'S석'], virtual: false } : DEFAULT_PRACTICE
+  };
+}
+var COLLECTED = [
+  {
+    id: 'ks2026', category: 'sports', sub: 'baseball', title: '2026 KBO 한국시리즈', status: 'ended',
+    period: '2026-11-03 ~ 2026-11-08', endDate: '2026-11-08',
+    venue: '수원 KT위즈파크(1·2차전), 대구 삼성라이온즈파크(3~5차전)',
+    seller: 'NOL 티켓(포스트시즌 입장권 단독 판매)', sellerUrl: 'https://nol.yanolja.com/ticket/genre/sports/postseason',
+    openAt: null, openText: '2026-11-02 11:00 부터 차전별 순차 예매', limit: 4, grades: null,
+    method: '입장권 전량 예매. 취소분은 경기 시작 2시간 전부터 구장에서 현장 판매',
+    notes: '대진 KT 위즈 대 삼성 라이온즈', result: '결과: 삼성 라이온즈 4승 1패 우승(5차전 11월 8일, 12 대 1)',
+    whereToCheck: ['KBO 공지', '구단별 예매처 공지'], source: '수집 데이터',
+    // 경기 목록(경기별 날짜는 확인하지 못해 넣지 않습니다)
+    games: [
+      { name: '1차전', venue: '수원 KT위즈파크' }, { name: '2차전', venue: '수원 KT위즈파크' },
+      { name: '3차전', venue: '대구 삼성라이온즈파크' }, { name: '4차전', venue: '대구 삼성라이온즈파크' }, { name: '5차전', venue: '대구 삼성라이온즈파크' }
+    ],
+    sources: [
+      { name: '일간스포츠', date: '2026-11-08', url: 'https://isplus.com/article/view/isp202611080166', evidence: '삼성은 8일 대구 삼성라이온즈파크에서 열린 2026 신한 SOL 뱅크 KBO 포스트시즌 한국시리즈(KS·7전 4선승제) 5차전에서 KT 위즈에 12-1로 승리, 시리즈 전적 4승 1패로 정상에 올랐다.' },
+      { name: 'OSEN(미주중앙일보 게재)', date: '2026-11-01', url: 'https://www.koreadaily.com/article/20261101020043794', evidence: '한국시리즈 입장권은 포스트시즌 입장권 단독 판매사인 NOL(야놀자) 티켓 예매 홈페이지와 애플리케이션 그리고 NOL(야놀자) 고객센터를 통해 1인당 최대 4매까지 예매할 수 있다.' },
+      { name: '위키트리', date: '2026-11-02', url: 'https://www.wikitree.co.kr/articles/1170985', evidence: '한국시리즈 1차전은 오는 3일 오후 6시 30분 수원KT위즈파크에서 열린다.' }
+    ],
+    practice: { queueSize: 500000, seats: 24000, limit: 4, grades: ['테이블석', '내야 지정석', '외야 지정석'], virtual: true }
+  },
+  {
+    id: 'kbo2027', category: 'sports', sub: 'baseball', title: '2027 KBO 리그 정규시즌', status: 'not_announced',
+    period: null, endDate: null, venue: null, seller: null, sellerUrl: null, openAt: null, openText: null, limit: null, grades: null, method: null,
+    notes: null, expected: '2026년 11월 16일 기준으로 예매 일정을 찾지 못했습니다.', whereToCheck: ['KBO 공지', '구단별 예매처 공지'],
+    source: '수집 데이터', sources: [], practice: DEFAULT_PRACTICE
+  },
+  collectedShow('m-rebecca', 'musical', '뮤지컬 〈레베카〉', '충무아트센터 대극장', '2026-11-24', '2027-03-14', 'https://nol.yanolja.com/ticket/products/26013993'),
+  collectedShow('m-twocities', 'musical', '뮤지컬 〈두 도시 이야기〉', '광림아트센터 BBCH홀', '2026-11-11', '2027-02-08', 'https://nol.yanolja.com/ticket/products/26013098'),
+  collectedShow('m-gwanghwamun', 'musical', '뮤지컬 〈광화문연가〉 부산', '부산 드림씨어터', '2026-11-21', '2026-11-22', 'https://nol.yanolja.com/ticket/products/26013001'),
+  collectedShow('c-sung', 'concert', '2026 성시경 연말 콘서트 〈성시경〉', 'KSPO DOME', '2026-12-31', '2027-01-03', 'https://nol.yanolja.com/ticket/products/26015783'),
+  collectedShow('c-shin', 'concert', '2026 신용재 콘서트 〈GRAVITY〉', '코엑스 오디토리움', '2026-12-24', '2026-12-25', 'https://nol.yanolja.com/ticket/products/26015568'),
+  collectedShow('c-tei', 'concert', '2026 테이 크리스마스 콘서트 〈산테이 할아버지는 알고 계신대〉', '코엑스아티움 우리은행홀', '2026-12-24', '2026-12-25', 'https://nol.yanolja.com/ticket/products/26015427', 'R석 143,000원, S석 132,000원')
+];
+function collected(id) { return COLLECTED.filter(function (c) { return c.id === id; })[0]; }
+// 기간의 끝 날짜가 오늘보다 과거이면 표시 상태는 「종료」입니다.
+function effStatus(c) { return c.endDate && validKey(c.endDate) && keyDiff(c.endDate, dayKey(Date.now())) > 0 ? 'ended' : c.status; }
+function sourceLabel(c) { return c.source === '수집 데이터' ? COLLECT_LABEL : c.source; }
+// 규칙으로 수집 데이터에서 찾습니다. 작품이나 가수 이름이 맞으면 그 후보만 돌려줍니다.
+var NAME_KEYS = [['레베카', 'm-rebecca'], ['두도시이야기', 'm-twocities'], ['광화문연가', 'm-gwanghwamun'], ['성시경', 'c-sung'], ['신용재', 'c-shin'], ['gravity', 'c-shin'], ['산테이', 'c-tei'], ['테이크리스마스', 'c-tei'], ['테이', 'c-tei']];
+// 한국시리즈 키워드(한국시리즈, 코리안시리즈, 코시, KS)
+function isKsText(text) {
+  var low = String(text).toLowerCase(), t = low.replace(/\s+/g, '');
+  return /한국시리즈|코리안시리즈|코시/.test(t) || /(^|[^a-z])ks([^a-z]|$)/.test(low);
+}
+// 2글자 이하 이름은 앞 글자가 한글이 아니고 뒤 글자가 「블, 크, 프, 지, 션」이 아닐 때만 맞습니다(테이블석, 스테이지 등 제외).
+function shortNameHit(low, key) {
+  for (var i = low.indexOf(key); i >= 0; i = low.indexOf(key, i + 1)) {
+    var prev = i > 0 ? low[i - 1] : '', next = low[i + key.length] || '';
+    if (!/[가-힣]/.test(prev) && (next === '' || '블크프지션'.indexOf(next) < 0)) return true;
+  }
+  return false;
+}
+function matchCollected(text) {
+  var low = String(text).toLowerCase(), t = low.replace(/\s+/g, '');
+  if (isKsText(text)) return ['ks2026'];
+  var hits = [];
+  NAME_KEYS.forEach(function (k) {
+    var hit = k[0].length <= 2 ? shortNameHit(low, k[0]) : t.indexOf(k[0]) >= 0;
+    if (hit && hits.indexOf(k[1]) < 0) hits.push(k[1]);
+  });
+  if (hits.length) return hits;
+  if (/야구|kbo|포스트시즌/.test(t)) return ['kbo2027', 'ks2026'];
+  if (/뮤지컬/.test(t)) return ['m-rebecca', 'm-twocities', 'm-gwanghwamun'];
+  if (/콘서트|공연/.test(t)) return ['c-sung', 'c-shin', 'c-tei'];
+  return null;
+}
+
+/* ---------- AI 웹 검색(후보 여러 개) ---------- */
+var FIND_EXAMPLE = '가상 한국시리즈 1차전 예매 일정을 찾아 줘';
+var FIND_FORMAT = '{\n  "candidates": [\n    {\n      "title": "행사 이름",\n      "category": "sports | musical | concert | etc",\n      "status": "upcoming | on_sale | not_announced | ended",\n      "openAt": "2026-11-20T14:00:00+09:00 또는 null",\n      "period": "2026-11-24 ~ 2027-03-14 또는 null",\n      "endDate": "2027-03-14 또는 null",\n      "venue": "장소 또는 null",\n      "seller": "예매처 또는 null",\n      "sellerUrl": "예매 페이지 주소 또는 null",\n      "limitPerPerson": 4,\n      "sourceUrl": "근거 페이지 주소 또는 null",\n      "evidence": "근거 문장 원문 또는 null",\n      "expected": "공지 전이면 예상 시기와 근거 또는 null",\n      "notes": "참고 사항 또는 null"\n    }\n  ]\n}';
+function exampleFindResp() {
+  var r = EX_GOAL.announced.resp;
+  return { candidates: [{
+    title: r.event, category: 'sports', status: 'upcoming', openAt: r.openAt, period: null, endDate: null, venue: '예시 돔구장',
+    seller: r.seller, sellerUrl: 'https://example.com/ticket/2026-ks-game1', limitPerPerson: 4, sourceUrl: r.sourceUrl, evidence: r.evidence,
+    expected: null, notes: r.notes
+  }] };
+}
+function findPrompt(query, category) {
+  return ['아래 문장에 맞는 예매 정보를 웹에서 찾아 후보로 정리해 주세요.', '',
+    '오늘 날짜: ' + kstToday() + ', 한국 시간',
+    '분야: ' + (CAT[category] ? CAT[category].label : '기타'), '', '규칙',
     '1. 주최 측 공지와 예매처 공지 같은 공식 출처를 우선하고, 찾은 페이지의 주소와 근거 문장을 원문 그대로 적습니다.',
-    '2. 오늘 이후의 일정만 답합니다. 지난 시즌 일정이나 이미 끝난 일정을 예매 오픈 일시로 답하지 않습니다.',
+    '2. 오늘 이후의 일정만 예매 오픈 일시로 답합니다. 지난 시즌 일정이나 이미 끝난 일정을 예매 오픈 일시로 답하지 않고, 끝난 예매는 status 를 ended 로 둡니다.',
     '3. 아직 공지되지 않았으면 추측한 날짜를 openAt 에 쓰지 말고 status 를 not_announced 로 둡니다. 예상 시기는 expected 에 근거와 함께 적습니다.',
     '4. 설명 없이 JSON 만 출력합니다.', '',
-    '출력 형식', GOAL_FORMAT, '',
-    '목표 문장', '<<<목표 시작>>>', clip(goalDraft.text, 200) || '(목표 문장을 입력하세요)', '<<<목표 끝>>>'].join('\n');
+    '후보는 1개부터 5개까지 적습니다.', '출력 형식', FIND_FORMAT, '',
+    '찾는 문장', '<<<문장 시작>>>', clip(query, 200), '<<<문장 끝>>>'].join('\n');
 }
-// 행사 이름 비교(공백 제외, 소문자)
-function normEvent(s) { return typeof s === 'string' ? s.replace(/\s+/g, '').toLowerCase() : ''; }
-function sameEvent(a, b) { var x = normEvent(a); return !!x && x === normEvent(b); }
-// 이미 등록한 공지가 다른 공지로 바뀌는 경우의 안내
-function replaceWarn(event, openAt) {
-  var n = S.notice;
-  if (!n || (sameEvent(n.event, event) && n.openAt === openAt)) return null;
-  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 공지(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.');
-}
-function sourceLink(url, isExample) {
-  if (!url) return h('span', { class: 'muted' }, '출처 주소 없음');
-  return h('span', null, h('a', { class: 'any', href: url, target: '_blank', rel: 'noopener noreferrer' }, url), isExample ? [' ', badge('예시', 'info')] : null);
-}
-function scrGoal() {
-  var inp = h('textarea', { id: 'goalInput', rows: 2, maxlength: 200, placeholder: '예: 한국시리즈 예매에 성공하고 싶습니다' });
-  inp.value = goalDraft.text;
-  var exMsg = h('p', { class: 'small muted', 'aria-live': 'polite' });
-  var resultBox = h('div', { class: 'stack', id: 'goalResult' });
-  var panel;
-  inp.addEventListener('input', function () { goalDraft.text = clip(inp.value, 200); goalDraft.exampleId = null; goalDraft.result = null; panel.refresh(); showResult(); });
-  var exBtns = GOAL_EX_IDS.map(function (id) {
-    return btn(EX_GOAL[id].label, 'btn--sm', function () {
-      goalDraft = { text: EX_GOAL[id].text, exampleId: id, result: null };
-      inp.value = goalDraft.text; panel.refresh(); showResult();
-      setText(exMsg, '예시 목표를 채웠습니다. 가상의 행사와 예매처 「예시티켓」입니다.');
-    });
+var FIND_STATUS = ['upcoming', 'on_sale', 'not_announced', 'ended'];
+var FIND_CATS = ['sports', 'musical', 'concert', 'etc'];
+function validateFind(o) {
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  // 10.3 의 단일 결과 형식은 후보 1개로 받아들입니다.
+  if (o.candidates === undefined && (o.event !== undefined || o.status !== undefined)) {
+    var single = validateGoal(o);
+    if (single.errs) return single;
+    var v = single.value;
+    return { value: [{ title: v.event, category: 'etc', status: v.status === 'announced' ? 'upcoming' : v.status, openAt: v.openAt, period: null, endDate: null, venue: null,
+      seller: v.seller, sellerUrl: null, limit: null, sourceUrl: v.sourceUrl, evidence: v.evidence, expected: v.expected, whereToCheck: v.whereToCheck, notes: v.notes }] };
+  }
+  if (!Array.isArray(o.candidates)) return { errs: [['candidates(후보)', '배열이 아닙니다']] };
+  if (!o.candidates.length) return { errs: [['candidates(후보)', '비어 있습니다']] };
+  if (o.candidates.length > 5) return { errs: [['candidates(후보)', '5개를 넘습니다(' + o.candidates.length + '개)']] };
+  var errs = [], out = [];
+  o.candidates.forEach(function (c, i) {
+    var F = 'candidates[' + i + ']';
+    if (!isPlain(c)) { errs.push([F, '객체가 아닙니다']); return; }
+    var x = {};
+    if (typeof c.title !== 'string' || !c.title.trim()) errs.push([F + '.title(행사 이름)', '비어 있거나 문자열이 아닙니다']);
+    else x.title = clip(wellFormed(c.title).trim(), 100);
+    var cat = typeof c.category === 'string' ? c.category.trim().toLowerCase() : '';
+    x.category = FIND_CATS.indexOf(cat) >= 0 ? cat : 'etc';
+    var st = typeof c.status === 'string' ? c.status.trim().toLowerCase() : '';
+    if (FIND_STATUS.indexOf(st) < 0) errs.push([F + '.status(상태)', FIND_STATUS.join(', ') + ' 가운데 하나가 아닙니다']);
+    else x.status = st;
+    var t = typeof c.openAt === 'string' ? c.openAt.trim() : '';
+    var ms = ISO_RE.test(t) ? Date.parse(t) : NaN;
+    x.openAt = null;
+    if (x.status === 'upcoming') {
+      if (isNaN(ms)) errs.push([F + '.openAt(예매 오픈 일시)', 'ISO 8601 날짜 문자열이 아닙니다']);
+      else if (ms <= Date.now()) errs.push([F + '.openAt(예매 오픈 일시)', '이미 지난 일시입니다']);
+      else if (ms > Date.now() + 2 * 365.25 * 86400000) errs.push([F + '.openAt(예매 오픈 일시)', '2년을 넘는 일시입니다']);
+      else x.openAt = ms;
+    } else if (!isNaN(ms)) x.openAt = ms;
+    x.period = strOrNull(c.period, 100, F + '.period', errs);
+    x.endDate = validKey(c.endDate) ? c.endDate : null;
+    x.venue = strOrNull(c.venue, 100, F + '.venue', errs);
+    x.seller = strOrNull(c.seller, 100, F + '.seller', errs);
+    // https:// 가 아닌 주소는 거부하지 않고 null 로 바꿉니다.
+    x.sellerUrl = typeof c.sellerUrl === 'string' && c.sellerUrl.length <= 2000 ? safeHttps(wellFormed(c.sellerUrl)) : null;
+    x.sourceUrl = typeof c.sourceUrl === 'string' && c.sourceUrl.length <= 2000 ? safeHttps(wellFormed(c.sourceUrl)) : null;
+    if (c.limitPerPerson == null) x.limit = null;
+    else if (!Number.isInteger(c.limitPerPerson) || c.limitPerPerson < 1 || c.limitPerPerson > 20) errs.push([F + '.limitPerPerson', '1부터 20 사이의 정수가 아닙니다']);
+    else x.limit = c.limitPerPerson;
+    x.evidence = strOrNull(c.evidence, 300, F + '.evidence', errs);
+    x.expected = strOrNull(c.expected, 500, F + '.expected', errs);
+    x.notes = strOrNull(c.notes, 500, F + '.notes', errs);
+    x.whereToCheck = [];
+    out.push(x);
   });
-  function showResult() {
-    var r = goalDraft.result;
-    if (!r) { resultBox.replaceChildren(); return; }
-    var v = r.v, isEx = r.source === '예시 응답';
-    var head = h('div', { class: 'row' }, h('strong', null, '예매 일정 찾기 결과'), srcTag(r.source));
-    var evBlock = v.evidence ? h('blockquote', { class: 'ev' }, '근거 문장: ', v.evidence) : h('p', { class: 'small muted' }, '근거 문장 없음');
-    if (v.status === 'announced') {
-      var cb = h('input', { type: 'checkbox', id: uid('gchk') });
-      var goBtn = btn('이 일정으로 진행', 'btn--primary btn--big', function () {
-        if (!cb.checked) return;
-        draft = {
-          type: 'text', typeManual: false, text: '', imageUrl: null, imageName: '', fromGoal: true,
-          exampleId: isEx && goalDraft.exampleId === 'announced' ? 'goalAnnounced' : null,
-          result: {
-            values: { event: v.event, openAt: v.openAt, seller: v.seller, venue: null, limitPerPerson: null, seatGrades: null, presale: null },
-            evidence: { event: v.evidence, openAt: v.evidence, seller: v.seller ? v.evidence : null }, source: r.source
-          }
-        };
-        go('confirm');
+  return errs.length ? { errs: errs } : { value: out };
+}
+var aiSeq = 0;
+function aiToCand(x, source) {
+  aiSeq += 1;
+  var limit = x.limit;
+  return {
+    id: 'ai-' + aiSeq, category: x.category, title: x.title, status: x.status, period: x.period, endDate: x.endDate, venue: x.venue,
+    seller: x.seller, sellerUrl: x.sellerUrl, openAt: x.openAt, openText: null, limit: limit, grades: null, method: null, notes: x.notes,
+    expected: x.expected, whereToCheck: x.whereToCheck || [], source: source,
+    sources: x.sourceUrl || x.evidence ? [{ name: source === '예시 응답' ? '예시 출처' : 'AI 응답 출처', date: null, url: x.sourceUrl, evidence: x.evidence }] : [],
+    practice: { queueSize: 80000, seats: 20000, limit: limit || 4, grades: ['R석', 'S석', 'A석'], virtual: true }
+  };
+}
+
+/* ---------- F1 예매 찾기(대화 기록은 한 번의 방문 안에서만 유지) ---------- */
+var findState = null, pickCand = null;
+function findOpen(cat, opts) {
+  opts = opts || {};
+  findState = { category: CAT[cat] ? cat : 'etc', msgs: [], fromCard: !!opts.fromCard, lastQuery: '', send: opts.send || null, demo: !!opts.demo };
+  go('find');
+}
+function scrFind() {
+  if (!findState) findState = { category: 'etc', msgs: [], fromCard: false, lastQuery: '', send: null, demo: false };
+  var st = findState;
+  var log = h('div', { class: 'chat', id: 'chatLog', role: 'log', 'aria-live': 'polite', 'aria-label': '예매 찾기 대화' });
+  var inp = h('input', { type: 'text', id: 'findInput', maxlength: 200, placeholder: '찾는 예매를 입력하세요', autocomplete: 'off' });
+  var composing = false;
+  inp.addEventListener('compositionstart', function () { composing = true; });
+  inp.addEventListener('compositionend', function () { composing = false; });
+  function addMsg(m) {
+    st.msgs.push(m);
+    var el = renderMsg(m);
+    log.appendChild(el);
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 무시 */ }
+  }
+  function svcCands(text, ids, query, notes) {
+    addMsg({ who: 'svc', text: text, notes: notes || [], cands: ids.map(collected), src: COLLECT_LABEL, aiBtn: query });
+  }
+  function submitText(raw) {
+    var t = clip(wellFormed(String(raw || '')).trim(), 200);
+    if (!t) return;
+    addMsg({ who: 'user', text: t });
+    st.lastQuery = t;
+    var ids = matchCollected(t);
+    if (ids) {
+      var notes = [];
+      if (ids.indexOf('ks2026') >= 0 && isKsText(t) && /잠실/.test(t)) notes.push('2026 한국시리즈는 수원과 대구에서 열려 잠실 경기는 없었습니다.');
+      svcCands('수집 데이터에서 찾은 후보입니다.', ids, t, notes);
+    } else addMsg({ who: 'svc', text: '수집 데이터에 없습니다. AI 웹 검색으로 찾습니다.', ai: { query: t } });
+  }
+  function choose(label) {
+    addMsg({ who: 'user', text: label });
+    st.lastQuery = label;
+    if (label === '프로야구') svcCands('프로야구 후보입니다.', ['kbo2027', 'ks2026'], label);
+    else addMsg({ who: 'svc', text: '이 종목은 시제품의 수집 범위가 아닙니다. AI 웹 검색으로 찾습니다.', ai: { query: label } });
+  }
+  function candCard(c) {
+    var s = effStatus(c);
+    return h('div', { class: 'cand' + (s === 'ended' ? ' cand--ended' : ''), 'data-id': c.id },
+      h('div', { class: 'row' }, h('strong', null, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s])),
+      c.period || c.openAt || c.openText ? h('p', { class: 'small' }, c.period ? '기간 ' + c.period : c.openAt ? '예매 오픈 ' + fmtDT(c.openAt) : c.openText) : null,
+      c.venue ? h('p', { class: 'small' }, '장소 ' + c.venue) : null,
+      c.seller ? h('p', { class: 'small' }, '예매처 ' + c.seller) : null,
+      s === 'ended' ? h('p', { class: 'small', style: 'font-weight:600' }, '올해는 종료됐습니다') : null,
+      h('div', { class: 'row' }, srcTag(sourceLabel(c)), btn('자세히 보기', 'btn--sm', function () { pickCand = c; go('pick'); })));
+  }
+  function candsBlock(list) {
+    var active = list.filter(function (c) { return effStatus(c) !== 'ended'; });
+    var ended = list.filter(function (c) { return effStatus(c) === 'ended'; });
+    return h('div', { class: 'stack' },
+      active.map(candCard),
+      ended.length ? h('div', { class: 'stack ended-group' }, h('p', { class: 'lbl' }, '종료된 예매'), ended.map(candCard)) : null);
+  }
+  function renderMsg(m) {
+    if (m.who === 'user') return h('div', { class: 'bubble bubble--user' }, m.text);
+    var parts = [];
+    if (m.text) parts.push(h('p', null, m.text));
+    (m.notes || []).forEach(function (x) { parts.push(h('p', { class: 'msg msg--warn small' }, x)); });
+    if (m.cands) parts.push(candsBlock(m.cands), h('div', { class: 'row' }, srcTag(m.src)));
+    // 연타 방지: 한 번 누른 종목 버튼은 그 말풍선에서 다시 누를 수 없습니다(다른 종목은 누를 수 있습니다). 이미 연 안내·패널은 다시 만들지 않습니다.
+    if (m.choices) {
+      var chosen = m.chosenList || (m.chosenList = []);
+      var cbtns = m.choices.map(function (c) {
+        var cb = btn(c, 'btn--sm', function () {
+          if (chosen.indexOf(c) >= 0) return;
+          chosen.push(c);
+          cb.disabled = true;
+          cb.setAttribute('aria-pressed', 'true');
+          choose(c);
+        }, { disabled: chosen.indexOf(c) >= 0, 'aria-pressed': chosen.indexOf(c) >= 0 ? 'true' : null });
+        return cb;
       });
-      var goHint = h('p', { class: 'small muted', id: uid('gohint') }, '출처 확인에 체크하면 진행합니다.');
-      goBtn.setAttribute('aria-describedby', goHint.id);
-      goBtn.disabled = true;
-      cb.addEventListener('change', function () { goBtn.disabled = !cb.checked; goHint.hidden = cb.checked; });
-      resultBox.replaceChildren(h('div', { class: 'box stack' }, head,
-        h('dl', { class: 'kv' },
-          h('dt', null, '행사'), h('dd', null, v.event),
-          h('dt', null, '예매 오픈 일시'), h('dd', null, fmtDT(v.openAt)),
-          h('dt', null, '예매처'), h('dd', null, v.seller || '미확인'),
-          h('dt', null, '출처'), h('dd', null, sourceLink(v.sourceUrl, isEx)),
-          h('dt', null, '참고 사항'), h('dd', null, v.notes || '없음')),
-        evBlock,
-        h('p', { class: 'msg msg--warn' }, 'AI 검색 결과는 틀릴 수 있습니다. 출처 공지를 열어 예매 오픈 일시를 확인하세요.'),
-        h('label', { class: 'check', for: cb.id }, cb, v.sourceUrl ? '출처 공지에서 예매 오픈 일시를 확인했습니다' : '공식 공지에서 예매 오픈 일시를 직접 확인했습니다'),
-        replaceWarn(v.event, v.openAt),
-        goBtn, goHint));
-    } else if (v.status === 'not_announced') {
-      var savedMsg = h('p', { class: 'small', 'aria-live': 'polite' });
-      resultBox.replaceChildren(h('div', { class: 'box stack' }, head,
-        h('p', { class: 'msg msg--warn' }, '아직 예매 일정이 공지되지 않았습니다.'),
-        h('dl', { class: 'kv' },
-          h('dt', null, '행사'), h('dd', null, v.event),
-          h('dt', null, '예상 시기'), h('dd', null, v.expected || '미확인'),
-          h('dt', null, '출처'), h('dd', null, sourceLink(v.sourceUrl, isEx))),
-        evBlock,
-        h('div', null, h('p', { class: 'lbl' }, '확인할 곳'), v.whereToCheck.length ? h('ul', { class: 'plain' }, v.whereToCheck.map(function (w) { return h('li', null, w); })) : h('p', { class: 'small muted' }, '미확인')),
-        h('div', { class: 'row' },
-          btn('공지 대기로 저장', 'btn--primary', function () {
-            S.goal = { text: goalDraft.text, event: v.event, expected: v.expected, whereToCheck: v.whereToCheck, sourceUrl: v.sourceUrl, source: r.source, exampleId: goalDraft.exampleId, savedAt: Date.now() };
-            save('goal');
-            savedMsg.replaceChildren('공지 대기로 저장했습니다. 홈 화면에 표시합니다. ', h('a', { href: '#home' }, '홈으로'));
-          }),
-          btn('확인 알림 일정 파일 내려받기', null, function () { downloadGoalIcs(v.event); }),
-          btn('다시 찾기', null, function () { goalDraft.result = null; panel.refresh(); showResult(); setText(exMsg, '오늘 날짜로 요청문을 다시 작성했습니다. 요청문을 다시 보내 주세요.'); })),
-        h('p', { class: 'small muted' }, '확인 알림 일정은 매일 09:00 에 14일 동안 반복합니다.'),
-        savedMsg));
-    } else {
-      resultBox.replaceChildren(h('div', { class: 'box stack' }, head,
-        h('p', { class: 'msg msg--bad' }, '이미 끝난 행사입니다. 다른 목표를 입력하세요.'),
-        h('dl', { class: 'kv' }, h('dt', null, '행사'), h('dd', null, v.event), h('dt', null, '출처'), h('dd', null, sourceLink(v.sourceUrl, isEx))),
-        evBlock,
-        S.goal && (goalDraft.fromCard || sameEvent(S.goal.event, v.event)) ? h('div', { class: 'msg msg--warn stack', id: 'endedGoal' },
-          h('p', null, '공지 대기 목표(' + S.goal.event + ')의 행사가 이미 끝났습니다. 공지 대기 목표를 삭제하세요.'),
-          h('div', { class: 'row' }, btn('대기 목표 삭제', 'btn--danger', function () { S.goal = null; save('goal'); goalDraft.fromCard = false; showResult(); }))) : null));
+      parts.push(h('div', { class: 'row' }, cbtns));
+    }
+    if (m.other) parts.push(h('div', { class: 'row' }, btn('다른 걸 찾기', 'btn--sm', function () {
+      if (!m.otherDone) { m.otherDone = true; addMsg({ who: 'svc', text: '찾는 공연 이름이나 조건을 입력하세요.' }); }
+      inp.focus();
+    })));
+    if (m.aiBtn) parts.push(h('div', { class: 'row' }, btn('AI 웹 검색으로 최신 정보 찾기', 'btn--sm', function () {
+      if (m.aiIndex != null && log.children[m.aiIndex]) {
+        var el = log.children[m.aiIndex];
+        try { el.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 무시 */ }
+        var tab = el.querySelector('[role=tab][aria-selected="true"]') || el.querySelector('button');
+        if (tab) tab.focus();
+        return;
+      }
+      m.aiIndex = st.msgs.length;
+      addMsg({ who: 'svc', text: 'AI 웹 검색 요청문을 작성했습니다.', ai: { query: m.aiBtn } });
+    })));
+    if (m.ai) {
+      var q = m.ai.query;
+      var panel = aiPanel({
+        title: 'AI 웹 검색: 예매 찾기',
+        getPrompt: function () { return findPrompt(q, st.category); },
+        note: function () { return 'Helpy Chat 입력창의 + 버튼에서 웹 검색을 선택한 뒤 보내세요.'; },
+        example: function () { return q === FIND_EXAMPLE ? exampleFindResp() : null; },
+        exampleMissing: '예시 응답은 시연용 예시 문장에서만 사용할 수 있습니다.',
+        validate: validateFind,
+        onApply: function (list, source) { addMsg({ who: 'svc', text: 'AI 웹 검색 결과입니다.', cands: list.map(function (x) { return aiToCand(x, source); }), src: source }); },
+        fallbackLabel: '공지 등록으로 전환',
+        onFallback: function () { go('notice'); },
+        startExample: !!m.ai.startExample
+      });
+      parts.push(panel.el);
+    }
+    return h('div', { class: 'bubble bubble--svc' }, parts);
+  }
+  // 대화 기록 다시 그리기(다른 화면에서 돌아온 경우)
+  st.msgs.forEach(function (m) { log.appendChild(renderMsg(m)); });
+  if (!st.msgs.length) {
+    var c = st.category;
+    if (c === 'sports') addMsg({ who: 'svc', text: '어떤 종목을 찾으시나요?', choices: ['프로야구', '프로축구', '프로농구', '프로배구'] });
+    else if (c === 'musical') addMsg({ who: 'svc', text: '2026년 11월 16일에 웹에서 수집한 공연입니다.', cands: ['m-rebecca', 'm-twocities', 'm-gwanghwamun'].map(collected), src: COLLECT_LABEL, other: true });
+    else if (c === 'concert') addMsg({ who: 'svc', text: '2026년 11월 16일에 웹에서 수집한 공연입니다.', cands: ['c-sung', 'c-shin', 'c-tei'].map(collected), src: COLLECT_LABEL, other: true });
+    else addMsg({ who: 'svc', text: '찾는 예매를 한 문장으로 입력하세요. 예: 한국시리즈 잠실 경기 예매할 수 있게 도와줘' });
+    if (st.demo) {
+      addMsg({ who: 'user', text: FIND_EXAMPLE });
+      st.lastQuery = FIND_EXAMPLE;
+      addMsg({ who: 'svc', text: '시연용 예시 문장입니다. AI 웹 검색 요청문과 예시 응답으로 진행합니다.', ai: { query: FIND_EXAMPLE, startExample: true } });
     }
   }
-  panel = aiPanel({
-    title: 'AI 요청: 예매 일정 찾기',
-    getPrompt: goalPrompt,
-    note: function () { return 'Helpy Chat 의 웹 검색을 켜고 보내세요.' + (goalDraft.text.trim() ? '' : ' 목표 문장을 먼저 입력하세요.'); },
-    example: function () { var id = goalDraft.exampleId; return id && EX_GOAL[id] && goalDraft.text === EX_GOAL[id].text ? EX_GOAL[id].resp : null; },
-    exampleMissing: '예시 응답은 예시 목표를 골랐을 때만 사용할 수 있습니다. 공지를 가지고 있으면 공지 등록으로 진행하세요.',
-    validate: validateGoal,
-    onApply: function (v, source) { goalDraft.result = { v: v, source: source }; showResult(); try { resultBox.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 무시 */ } },
-    fallbackLabel: '공지 등록으로 전환',
-    onFallback: function () { go('notice'); },
-    startExample: flowDemo && !!goalDraft.exampleId
-  });
-  showResult();
+  if (st.send) { var s0 = st.send; st.send = null; submitText(s0); }
+  var form = h('form', { class: 'findbar', onsubmit: function (e) { e.preventDefault(); if (composing) return; submitText(inp.value); inp.value = ''; } },
+    h('label', { class: 'sr-only', for: inp.id }, '찾는 예매를 입력하세요'),
+    h('div', { class: 'findbar__in' }, inp, h('button', { type: 'submit', class: 'btn btn--primary' }, '보내기')));
   return h('div', null,
     h('section', { class: 'sec' },
-      h('h1', { class: 'h1' }, '목표로 시작'),
-      h('p', { class: 'lead' }, '목표 문장을 적으면 AI 가 예매 일정을 찾습니다. 찾은 일정은 출처 공지에서 확인한 뒤 진행합니다.')),
+      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '예매 찾기'), btn('분야 다시 선택', 'btn--sm', function () { go('home'); })),
+      h('p', { class: 'small muted' }, '분야: ', h('strong', { id: 'findCat' }, CAT[st.category].label))),
+    h('section', { class: 'sec', style: 'padding-bottom:0' }, log),
+    form);
+}
+
+/* ---------- F2 선택한 예매 정보 ---------- */
+// 예매 테스트 대상 저장: 연습 조건과 함께 실제 예매 조건(예매처, 예매 오픈, 1인 구매 한도, 출처)과 경기 목록을 저장합니다.
+function startTest(c) {
+  var p = c.practice || DEFAULT_PRACTICE;
+  var games = (c.games || []).map(function (g) { return { name: g.name, venue: g.venue }; });
+  S.target = {
+    id: c.id, title: c.title, category: c.category, venue: c.venue || null, queueSize: p.queueSize, seats: p.seats,
+    limit: c.limit || null, grades: p.grades.slice(), virtual: !!p.virtual, source: c.source,
+    seller: c.seller || null, openText: c.openAt ? fmtDT(c.openAt) : (c.openText || null), games: games, savedAt: Date.now(),
+    ended: effStatus(c) === 'ended', whereToCheck: (c.whereToCheck || []).slice(0, 5), pastOpen: pastOpenText(c),
+    sourceUrl: c.sources && c.sources[0] ? c.sources[0].url : null
+  };
+  save('target');
+  S.practiceSetting = { queueSize: p.queueSize, focus: null, source: c.source, fromTarget: true, game: games.length ? 0 : null, grade: p.grades[0], buy: Math.min(2, c.limit || 4) };
+  save('practiceSetting');
+  go('practice');
+}
+function waitGoalEvent(c, nextOf) { return nextOf ? c.title + ' 다음 예매' : c.title; }
+// 지난 예매 오픈 문장: 종료된 예매의 예매 오픈 일시나 수집한 문장
+function pastOpenText(c) { return effStatus(c) === 'ended' ? (c.openAt ? fmtDT(c.openAt) : (c.openText || null)) : null; }
+// 코치 리포트에서 공지 대기로 저장할 때 target 을 후보 형식으로 바꿉니다(F2 와 같은 저장 규칙을 씁니다).
+function targetAsCand(t) {
+  return { title: t.title, status: t.ended ? 'ended' : 'on_sale', endDate: null, openAt: null, openText: t.pastOpen, expected: null,
+    whereToCheck: t.whereToCheck, sources: t.sourceUrl ? [{ url: t.sourceUrl }] : [], source: t.source, query: t.title };
+}
+// 공지 대기로 저장 버튼. 다른 행사의 대기 목표가 이미 있으면 교체 안내를 보여 주고 확인을 받은 뒤 저장합니다.
+function waitGoalButton(label, cls, c, nextOf, done) {
+  var confirmBox = h('div', { class: 'msg msg--warn small stack', id: 'goalReplaceWarn', hidden: true });
+  var b = btn(label, cls, function () {
+    var ev = waitGoalEvent(c, nextOf);
+    if (S.goal && !sameEvent(S.goal.event, ev)) {
+      confirmBox.replaceChildren(
+        h('p', null, '이미 저장한 공지 대기 목표(' + S.goal.event + ')가 이 예매로 바뀝니다.'),
+        h('div', { class: 'row' },
+          btn('교체합니다', 'btn--primary btn--sm', function () { confirmBox.hidden = true; saveWaitGoal(c, nextOf); done(); }),
+          btn('취소', 'btn--sm', function () { confirmBox.hidden = true; })));
+      confirmBox.hidden = false;
+      return;
+    }
+    saveWaitGoal(c, nextOf); done();
+  });
+  return { btn: b, box: confirmBox };
+}
+function saveWaitGoal(c, nextOf) {
+  S.goal = {
+    text: c.query || (findState && findState.lastQuery) || c.title,
+    event: waitGoalEvent(c, nextOf),
+    expected: nextOf ? '다음 예매 일정은 공지 전입니다.' : (c.expected || null),
+    whereToCheck: (c.whereToCheck && c.whereToCheck.length ? c.whereToCheck : ['예매처 공지']).slice(0, 5),
+    sourceUrl: c.sources[0] ? c.sources[0].url : null,
+    source: c.source, exampleId: null, savedAt: Date.now(),
+    pastOpen: nextOf ? pastOpenText(c) : null
+  };
+  save('goal');
+}
+function scrPick() {
+  var c = pickCand;
+  if (!c) {
+    return h('div', null, h('section', { class: 'sec stack' },
+      h('h1', { class: 'h1' }, '선택한 예매 정보'),
+      h('p', { class: 'msg' }, '선택한 예매가 없습니다. 예매 찾기에서 후보를 고르세요.'),
+      h('div', { class: 'row' }, btn('예매 찾기', 'btn--primary', function () { findState ? go('find') : findOpen('etc'); }))));
+  }
+  var s = effStatus(c), isEx = c.source === '예시 응답', isAi = c.source !== '수집 데이터';
+  var NA = '정보 없음';
+  function row(k, v) { return h('tr', null, h('th', { scope: 'row' }, k), h('td', { class: 'any' }, v == null || v === '' ? NA : v)); }
+  var p = c.practice || DEFAULT_PRACTICE;
+  var table = h('div', { class: 'tbl tbl--fit', id: 'pickInfo' }, h('table', null, h('tbody', null,
+    row('행사', c.title), row('분야', CAT[c.category] ? CAT[c.category].label : '기타'),
+    row('상태', STATUS_LABEL[s] + (s !== c.status ? '(기간 종료로 표시)' : '')),
+    row('일정이나 기간', c.period), row('장소', c.venue),
+    row('예매처', c.seller ? [c.seller, c.sellerUrl ? [' ', h('a', { href: c.sellerUrl, target: '_blank', rel: 'noopener noreferrer' }, '예매 페이지')] : null] : null),
+    row('예매 오픈 일시', c.openAt ? fmtDT(c.openAt) : c.openText),
+    row('1인 구매 한도', c.limit ? c.limit + '매' : null),
+    row('좌석 등급과 가격', c.grades), row('예매 방식', c.method),
+    row('참고 사항', [c.notes, c.result].filter(Boolean).join('. ') || null),
+    c.expected ? row('예상 시기', c.expected) : null,
+    c.whereToCheck && c.whereToCheck.length ? row('확인할 곳', c.whereToCheck.join(', ')) : null,
+    row('연습 조건', '대기 인원 ' + num(p.queueSize) + '명, 판매 좌석 ' + num(p.seats) + '석, 좌석 등급 ' + p.grades.join(', ') + (p.virtual ? '(가상 등급)' : '')))));
+  var srcList = c.sources.length ? h('ol', { class: 'srcs', id: 'pickSources' }, c.sources.map(function (x) {
+    return h('li', { class: 'stack', style: 'gap:2px' },
+      h('p', null, h('strong', null, x.name), x.date ? ' ' + x.date : ''),
+      h('p', { class: 'small' }, sourceLink(x.url, isEx)),
+      x.evidence ? h('blockquote', { class: 'ev' }, '근거 문장: ', x.evidence) : null);
+  })) : h('p', { class: 'small muted' }, '출처 없음');
+  var endedBox = null;
+  if (s === 'ended') {
+    endedBox = h('div', { class: 'msg msg--bad stack', role: 'note', id: 'endedNotice' },
+      h('p', { style: 'font-weight:700' }, '주의: 종료된 예매입니다'),
+      c.id === 'ks2026' ? [h('p', null, '2026 한국시리즈는 11월 8일 5차전으로 종료됐습니다. 지금은 예매할 수 없습니다.'), h('p', null, c.result)] : h('p', null, '이 예매는 종료됐습니다.'));
+  }
+  var savedMsg = h('p', { class: 'small', 'aria-live': 'polite' });
+  function saved() { savedMsg.replaceChildren('공지 대기로 저장했습니다. 홈 화면에 표시합니다. ', h('a', { href: '#home' }, '홈으로')); }
+  var testBtn = btn('이 예매 조건으로 예매 테스트', s === 'ended' ? 'btn--primary' : null, function () { startTest(c); });
+  var actions = [], goalWarn = null;
+  if (s === 'ended') {
+    var wg = waitGoalButton('다음 예매 공지 대기로 저장', null, c, true, saved);
+    actions.push(testBtn, wg.btn); goalWarn = wg.box;
+  } else if (s === 'on_sale') {
+    if (c.sellerUrl) actions.push(h('a', { class: 'btn btn--primary', href: c.sellerUrl, target: '_blank', rel: 'noopener noreferrer' }, '예매처에서 예매'));
+    actions.push(testBtn);
+  } else if (s === 'not_announced') {
+    var wg2 = waitGoalButton('공지 대기로 저장', 'btn--primary', c, false, saved);
+    actions.push(wg2.btn, btn('확인 알림 일정 파일 내려받기', null, function () { downloadGoalIcs(c.title); }));
+    goalWarn = wg2.box;
+  }
+  var prep = null;
+  if (s === 'upcoming') {
+    var cb = isAi ? h('input', { type: 'checkbox', id: uid('pchk') }) : null;
+    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처 확인에 체크하면 진행합니다.');
+    var prepBtn = btn('이 예매 준비 시작', 'btn--primary btn--big', function () {
+      if (cb && !cb.checked) return;
+      var ev = c.sources[0] ? c.sources[0].evidence : null;
+      draft = {
+        type: 'text', typeManual: false, text: '', imageUrl: null, imageName: '', fromGoal: true,
+        fromGoalCard: !!(findState && findState.fromCard),
+        exampleId: isEx ? 'goalAnnounced' : null,
+        result: {
+          values: { event: c.title, openAt: c.openAt, seller: c.seller, venue: c.venue, limitPerPerson: c.limit, seatGrades: null, presale: null },
+          evidence: { event: ev, openAt: ev, seller: c.seller ? ev : null }, source: c.source
+        }
+      };
+      go('confirm');
+    });
+    if (cb) {
+      prepBtn.disabled = true; prepBtn.setAttribute('aria-describedby', hint.id);
+      cb.addEventListener('change', function () { prepBtn.disabled = !cb.checked; hint.hidden = cb.checked; });
+    } else hint.hidden = true;
+    prep = h('div', { class: 'stack' },
+      cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처 공지에서 예매 오픈 일시를 확인했습니다' : '공식 공지에서 예매 오픈 일시를 직접 확인했습니다') : null,
+      replaceWarn(c.title, c.openAt), prepBtn, hint);
+  }
+  var delGoal = s === 'ended' && S.goal && findState && findState.fromCard && sameEvent(S.goal.event, c.title) ? h('div', { class: 'msg msg--warn stack', id: 'endedGoal' },
+    h('p', null, '공지 대기 목표(' + S.goal.event + ')의 행사가 종료됐습니다. 공지 대기 목표를 삭제하세요.'),
+    h('div', { class: 'row' }, btn('대기 목표 삭제', 'btn--danger', function () { S.goal = null; save('goal'); findState.fromCard = false; render(); }))) : null;
+  return h('div', null,
     h('section', { class: 'sec stack' },
-      h('h2', { class: 'h2' }, '예시 목표'),
-      h('div', { class: 'row' }, exBtns), exMsg,
-      field('목표 문장(최대 200자)', inp)),
-    h('section', { class: 'sec stack' }, panel.el, resultBox,
-      h('div', { class: 'row' }, btn('공지 등록', null, function () { go('notice'); }), h('span', { class: 'small muted' }, '공지를 이미 가지고 있으면 공지 등록으로 진행합니다.'))));
+      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '선택한 예매 정보'), btn('예매 찾기로', 'btn--sm', function () { findState ? go('find') : findOpen(c.category); })),
+      endedBox,
+      h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s]), srcTag(sourceLabel(c))),
+      table),
+    h('section', { class: 'sec stack' },
+      h('h2', { class: 'h2' }, '출처'),
+      h('p', { class: 'msg msg--warn small' }, isAi ? 'AI 검색 결과는 틀릴 수 있습니다. 출처를 열어 확인하세요.' : '2026년 11월 16일에 수집한 정보입니다. 예매 전에 예매처 공지를 다시 확인하세요.'),
+      srcList),
+    h('section', { class: 'sec stack' },
+      h('h2', { class: 'h2' }, '다음 단계'),
+      actions.length ? h('div', { class: 'row' }, actions) : null,
+      goalWarn, prep, savedMsg, delGoal,
+      h('p', { class: 'small muted' }, '예매 테스트는 가상 시뮬레이션입니다. 실제 예매처에 접속하지 않습니다.')));
 }
 
 /* ---------- S1 공지 등록 ---------- */
@@ -1539,6 +1964,11 @@ function scrConfirm() {
     // 공지 대기 목표 정리: 대기 카드에서 들어왔거나 행사 이름이 같을 때만 지웁니다. 무관한 대기 목표는 남깁니다.
     if (S.goal && ((res && draft.fromGoalCard) || sameEvent(S.goal.event, S.notice.event))) { S.goal = null; save('goal'); }
     draft.fromGoalCard = false;
+    // 같은 대화에서 다른 후보를 이어서 확정해도 새로 저장한 대기 목표가 지워지지 않게 합니다.
+    if (findState) findState.fromCard = false;
+    // 실제 공지를 확정하면 이전 예매 테스트 대상과 그 연습 설정을 해제합니다.
+    if (S.target) { S.target = null; save('target'); }
+    if (S.practiceSetting && S.practiceSetting.fromTarget) { S.practiceSetting = null; save('practiceSetting'); }
     go('situation');
   }
   var checkCount = 0;
@@ -1995,7 +2425,9 @@ function practiceEngine(root, cfg, onDone) {
   var acc = { reaction: [], captcha: [], seat: [], early: 0, wrong: 0, reselect: 0 };
   var prog = h('ol', { class: 'prog', 'aria-label': '연습 진행' });
   var body = h('div', { class: 'stage', 'aria-live': 'polite' });
-  root.replaceChildren(prog, body);
+  // 진행 중 화면 위쪽 한 줄: 행사(경기 포함), 좌석 등급, 매수
+  var head = cfg.header ? h('p', { class: 'msg small', id: 'testHeader' }, cfg.header) : null;
+  root.replaceChildren.apply(root, [head, prog, body].filter(Boolean));
   var idx = 0, t0 = performance.now();
   function drawProg() {
     prog.replaceChildren.apply(prog, seq.map(function (s, i) {
@@ -2123,9 +2555,11 @@ function practiceEngine(root, cfg, onDone) {
       var grid = h('div', { class: 'seats', role: 'group', 'aria-label': '좌석표 8열 10번' });
       var si = null;
       var done = btn('좌석 선택 완료', 'btn--primary', function () { if (picked.length === need) { clearInterval(si); ok({ ms: Math.round(performance.now() - t), reselect: reselect }); } });
+      // 조건 확인에서 고른 등급(cfg.prefGrade)을 처음 선택된 등급으로 둡니다.
+      var firstGrade = cfg.prefGrade && cfg.grades.indexOf(cfg.prefGrade) >= 0 ? cfg.grades.indexOf(cfg.prefGrade) : 0;
       var gradeBtns = cfg.grades.map(function (g, gi) {
         var b = btn(g, 'btn--sm', function () { gradeBtns.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); gen(); });
-        b.setAttribute('aria-pressed', String(gi === 0));
+        b.setAttribute('aria-pressed', String(gi === firstGrade));
         return b;
       });
       function label(i) { return Math.floor(i / 10) + 1 + '열 ' + (i % 10 + 1) + '번 좌석, ' + (seats[i] === 'sold' ? '판매 완료' : picked.indexOf(i) >= 0 ? '선택함' : '선택 가능'); }
@@ -2185,12 +2619,16 @@ function practiceEngine(root, cfg, onDone) {
   next();
 }
 function recSummary(rec, msg) {
-  var rows = [['종류', rec.kind + (rec.focus ? '(' + STAGE_LABEL[rec.focus] + ' 5회)' : '')], ['대기 인원', num(rec.queueSize) + '명'],
+  var rows = [];
+  if (rec.eventName) rows.push(['행사', rec.eventName]);
+  if (rec.grade) rows.push(['좌석 등급', rec.grade]);
+  if (rec.buy) rows.push(['매수', rec.buy + '매']);
+  rows = rows.concat([['종류', rec.kind + (rec.focus ? '(' + STAGE_LABEL[rec.focus] + ' 5회)' : '')], ['대기 인원', num(rec.queueSize) + '명'],
     ['반응 시간', fmtMs(rec.reactionMs)], ['오픈 전 누름', rec.earlyClicks + '회'], ['대기순서', rec.queueRank == null ? '-' : num(rec.queueRank) + '번'],
     ['새로고침', rec.refreshCount + '회'], ['보안문자', fmtSec(rec.captchaMs) + ', 오답 ' + rec.captchaWrong + '회'],
     ['좌석 선택', fmtSec(rec.seatMs) + ', 다시 고름 ' + rec.seatReselect + '회'], ['결제', fmtSec(rec.payMs)], ['전체 소요', fmtSec(rec.totalMs)],
-    ['실패 단계', rec.failStage ? STAGE_LABEL[rec.failStage] : '없음']];
-  return h('div', { class: 'stack' },
+    ['실패 단계', rec.failStage ? STAGE_LABEL[rec.failStage] : '없음']]);
+  return h('div', { class: 'stack', id: 'recSummary' },
     rec.failStage ? h('p', { class: 'msg msg--bad' }, msg || STAGE_LABEL[rec.failStage] + ' 단계에서 실패했습니다.') :
       h('p', { class: 'msg msg--good' }, rec.focus ? '집중 연습 5회를 마쳤습니다.' : '예매를 완료했습니다. 가상 결제입니다.'),
     h('dl', { class: 'kv' }, rows.map(function (r) { return [h('dt', null, r[0]), h('dd', null, r[1])]; })),
@@ -2326,8 +2764,44 @@ function lastResultView() {
     h('p', null, text, ' (', fmtStamp(r.at), r.event ? ', ' + r.event : '', ')'),
     r.memo ? h('p', { class: 'small' }, '메모: ', r.memo) : null);
 }
+// 테스트 대상 상자: target 행사의 가장 최근 예매 테스트 기록(없으면 표시하지 않습니다)
+function coachTargetBox(t) {
+  var r = null;
+  for (var i = S.records.length - 1; i >= 0; i--) { if (S.records[i].targetTitle === t.title) { r = S.records[i]; break; } }
+  if (!r) return null;
+  var outcome = r.failStage ? STAGE_LABEL[r.failStage] + ' 단계에서 실패했습니다' + (r.failStage === 'queue' && r.queueRank != null ? '(대기순서 ' + num(r.queueRank) + '번)' : '') + '.'
+    : r.focus ? STAGE_LABEL[r.focus] + ' 집중 연습 5회를 마쳤습니다.' : '결제까지 완료했습니다.';
+  return h('div', { class: 'box box--soft stack', id: 'coachTarget' },
+    h('p', { class: 'h3', style: 'margin:0' }, '테스트 대상'),
+    h('dl', { class: 'kv' },
+      h('dt', null, '행사'), h('dd', null, r.eventName || t.title),
+      h('dt', null, '좌석 등급'), h('dd', null, r.grade ? r.grade + (t.virtual ? '(가상 등급)' : '') : '정보 없음'),
+      h('dt', null, '매수'), h('dd', null, r.buy ? r.buy + '매' : '정보 없음'),
+      h('dt', null, '대기 인원'), h('dd', null, num(r.queueSize) + '명'),
+      h('dt', null, '최근 결과'), h('dd', null, outcome)));
+}
+// 다음 단계 구역: 조건을 바꿔 다시 테스트, 종료된 예매면 다음 예매 공지 대기로 저장
+function coachNextSection(t) {
+  var c = targetAsCand(t);
+  var area = h('div', { class: 'stack', id: 'coachNext' });
+  var items = [btn('조건을 바꿔 다시 테스트', null, function () { go('practice'); })];
+  if (t.ended) {
+    if (S.goal && sameEvent(S.goal.event, waitGoalEvent(c, true))) area.append(h('p', { class: 'msg small' }, '공지 대기로 저장돼 있습니다.'));
+    else {
+      var wg = waitGoalButton('다음 예매 공지 대기로 저장', 'btn--primary', c, true, function () {
+        // 저장한 뒤에는 저장 버튼을 숨깁니다. 남겨 두면 다시 눌러 같은 안내가 반복됩니다.
+        wg.btn.hidden = true;
+        area.replaceChildren(h('p', { class: 'msg msg--good small' }, '홈에 공지 대기 카드를 저장했습니다.'), h('div', { class: 'row' }, btn('홈', null, function () { go('home'); })));
+      });
+      items.push(wg.btn);
+      area.append(wg.box);
+    }
+  }
+  return h('section', { class: 'sec stack' }, h('h2', { class: 'h2' }, '다음 단계'), h('div', { class: 'row' }, items), area);
+}
 function scrCoach() {
   var an = analyze(S.records);
+  var t = S.target;
   // 기록 개수가 바뀌면 이전 코치 리포트 결과를 비운다.
   if (coachResultCount !== S.records.length) { coachResult = null; coachResultCount = S.records.length; }
   var withinAll = !!(an && an.weak && !(an.failRec && an.failRec.failStage === an.weak) && an.ratios[an.weak] != null && an.ratios[an.weak] <= 1);
@@ -2336,7 +2810,8 @@ function scrCoach() {
       h('h1', { class: 'h1' }, '코치 리포트'),
       h('p', { class: 'msg' }, '연습 기록이 없습니다.'),
       lastResultView(),
-      h('div', { class: 'row' }, btn('연습 시작', 'btn--primary', function () { go('practice'); }), btn('워밍업 연습', null, function () { go('warmup'); }))));
+      h('div', { class: 'row' }, btn('연습 시작', 'btn--primary', function () { go('practice'); }), btn('워밍업 연습', null, function () { go('warmup'); }))),
+      t ? coachNextSection(t) : null);
   }
   var rows = Object.keys(BASE).map(function (s) {
     return h('tr', { 'data-weak': s === an.weak ? '1' : null }, h('td', null, STAGE_LABEL[s], s === an.weak ? ' (약점)' : ''), h('td', { class: 'mono' }, fmtStageVal(s, an.avgs[s])),
@@ -2365,8 +2840,12 @@ function scrCoach() {
         h('dt', null, '다음 연습'), h('dd', null, '대기 인원 ' + num(c.nextSetting.queueSize) + '명, ' + (c.nextSetting.focus ? STAGE_LABEL[c.nextSetting.focus] + ' 집중 5회' : '전체 진행'))),
       h('p', null, c.reason),
       h('p', null, '연습 과제: ', c.task),
-      btn('추천 설정 적용', 'btn--primary btn--big', function () {
-        S.practiceSetting = { queueSize: c.nextSetting.queueSize, focus: c.nextSetting.focus, source: c.source };
+      btn(t ? '추천 설정으로 다시 테스트' : '추천 설정 적용', 'btn--primary btn--big', function () {
+        var prev = S.practiceSetting && S.practiceSetting.fromTarget ? S.practiceSetting : null;
+        // target 이 있으면 경기, 좌석 등급, 매수, fromTarget 을 유지해야 조건 확인 화면이 추천 값을 버리지 않습니다.
+        S.practiceSetting = t
+          ? { queueSize: c.nextSetting.queueSize, focus: c.nextSetting.focus, source: c.source, fromTarget: true, game: prev ? prev.game : null, grade: prev ? prev.grade : null, buy: prev ? prev.buy : null }
+          : { queueSize: c.nextSetting.queueSize, focus: c.nextSetting.focus, source: c.source };
         save('practiceSetting'); go('practice');
       })));
   }
@@ -2403,6 +2882,7 @@ function scrCoach() {
   return h('div', null,
     h('section', { class: 'sec stack' },
       h('h1', { class: 'h1' }, '코치 리포트'),
+      t ? coachTargetBox(t) : null,
       h('div', { class: 'row' }, h('h2', { class: 'h2', style: 'margin:0' }, '규칙 분석'), srcTag('규칙 분석')),
       withinAll ? h('div', { class: 'msg msg--good stack', style: 'gap:2px' },
         h('p', null, '모든 단계가 기준 이내입니다.'),
@@ -2414,13 +2894,115 @@ function scrCoach() {
       h('div', { class: 'tbl tbl--fit' }, h('table', null, h('thead', null, h('tr', null, h('th', null, '단계'), h('th', null, '평균'), h('th', null, '기준'), h('th', null, '배율'))), h('tbody', null, rows))),
       h('h3', { class: 'h3' }, '최근 3회 추이'),
       h('div', { class: 'stack' }, trend)),
-    h('section', { class: 'sec stack' }, panel.el, resultBox));
+    h('section', { class: 'sec stack' }, panel.el, resultBox),
+    t ? coachNextSection(t) : null);
+}
+
+/* ---------- S9 예매 테스트 조건 확인(target 이 있을 때) ---------- */
+// 기준 반응 시간(ms) = 150 + 2500 × 판매 좌석 수 ÷ 대기 인원(대기열 공식 clamp((react - 150) / 2500, 0.002, 1) 에서 유도)
+function difficultyText(queueSize, seats) {
+  var head = '대기 인원 ' + num(queueSize) + '명, 판매 좌석 ' + num(seats) + '석입니다. ';
+  if (queueSize <= seats) return head + '반응 속도와 관계없이 좌석 선택까지 진행합니다.';
+  var ms = 150 + 2500 * seats / queueSize;
+  return head + '반응이 ' + (ms / 1000).toFixed(2) + '초를 넘으면 대기열에서 매진됩니다.';
+}
+function scrTargetTest(t) {
+  var ps = S.practiceSetting && S.practiceSetting.fromTarget ? S.practiceSetting : null;
+  var games = t.games || [], maxBuy = t.limit || 4;
+  // 저장 값은 목록 안의 값일 때만 씁니다(경기는 목록 안의 번호, 등급은 목록 안의 값, 매수는 1부터 한도까지).
+  var sel = {
+    game: games.length ? (ps && Number.isInteger(ps.game) && ps.game < games.length ? ps.game : 0) : null,
+    grade: ps && t.grades.indexOf(ps.grade) >= 0 ? ps.grade : t.grades[0],
+    buy: ps && Number.isInteger(ps.buy) && ps.buy >= 1 && ps.buy <= maxBuy ? ps.buy : Math.min(2, maxBuy),
+    queueSize: ps && QUEUE_SIZES.indexOf(ps.queueSize) >= 0 ? ps.queueSize : t.queueSize,
+    focus: ps && ps.focus ? ps.focus : null
+  };
+  function persist() {
+    S.practiceSetting = { queueSize: sel.queueSize, focus: sel.focus, source: t.source, fromTarget: true, game: sel.game, grade: sel.grade, buy: sel.buy };
+    save('practiceSetting');
+  }
+  function eventName() { return t.title + (sel.game != null ? ' ' + games[sel.game].name : ''); }
+  // 버튼 묶음(role="group", aria-pressed)
+  function group(label, items, isOn, onPick, id) {
+    var btns = items.map(function (it) {
+      var b = btn(it.label, 'btn--sm', function () { onPick(it.value); btns.forEach(function (x, i) { x.setAttribute('aria-pressed', String(isOn(items[i].value))); }); after(); });
+      b.setAttribute('aria-pressed', String(isOn(it.value)));
+      return b;
+    });
+    return h('div', { class: 'field' }, h('span', { class: 'lbl', id: id + '-l' }, label), h('div', { class: 'row', role: 'group', 'aria-labelledby': id + '-l', id: id }, btns));
+  }
+  var gameGroup = games.length ? group('경기', games.map(function (g, i) { return { label: g.name + ' · ' + g.venue, value: i }; }),
+    function (v) { return sel.game === v; }, function (v) { sel.game = v; }, 'gameGroup') : null;
+  var gradeGroup = group('좌석 등급' + (t.virtual ? '(가상 등급)' : ''), t.grades.map(function (g) { return { label: g, value: g }; }),
+    function (v) { return sel.grade === v; }, function (v) { sel.grade = v; }, 'gradeGroup');
+  var buyItems = []; for (var b = 1; b <= maxBuy; b++) buyItems.push({ label: b + '매', value: b });
+  var buyGroup = group('매수', buyItems, function (v) { return sel.buy === v; }, function (v) { sel.buy = v; }, 'buyGroup');
+  var qSel = h('select', { id: 'targetQueue' }, QUEUE_SIZES.map(function (q) { return h('option', { value: String(q), selected: q === sel.queueSize }, num(q) + '명'); }));
+  var diff = h('p', { class: 'msg msg--warn small', id: 'difficulty', 'aria-live': 'polite' });
+  var fSel = h('select', { id: 'targetFocus' }, [['', '전체 진행'], ['reaction', '반응 5회'], ['captcha', '보안문자 5회'], ['seat', '좌석 선택 5회']].map(function (o) { return h('option', { value: o[0], selected: (sel.focus || '') === o[0] }, o[1]); }));
+  var startBtn = btn('', 'btn--primary btn--big', start);
+  startBtn.id = 'targetStart';
+  var summary = h('p', { class: 'small muted', id: 'targetSummary' });
+  function after() {
+    setText(diff, difficultyText(sel.queueSize, t.seats));
+    setText(startBtn, sel.focus ? '집중 연습 시작' : '예매 테스트 시작');
+    setText(summary, '테스트 대상: ' + eventName() + ', ' + sel.grade + ', ' + sel.buy + '매');
+    persist();
+  }
+  qSel.addEventListener('change', function () { sel.queueSize = +qSel.value; after(); });
+  fSel.addEventListener('change', function () { sel.focus = fSel.value || null; after(); });
+  var area = h('div', { class: 'stack' });
+  function start() {
+    var focus = sel.focus;
+    stepOverride = 2; renderSteps(route()); // 예매 테스트 진행 중과 결과 요약은 「3. 예매 테스트」
+    practiceEngine(area, {
+      kind: focus ? '집중' : '맞춤', queueSize: sel.queueSize, seats: t.seats, grades: t.grades, prefGrade: sel.grade, buy: sel.buy,
+      queueMs: [3000, 6000], focus: focus, header: eventName() + ' · ' + sel.grade + (t.virtual ? '(가상 등급)' : '') + ' · ' + sel.buy + '매',
+      extra: { targetTitle: t.title, eventName: eventName(), grade: sel.grade, buy: sel.buy }
+    }, function (rec, msg) {
+      area.replaceChildren(recSummary(rec, msg), h('div', { class: 'row' }, btn('코치 리포트 보기', 'btn--primary btn--big', function () { go('coach'); }), btn('다시 테스트', null, start)));
+    });
+  }
+  area.append(startBtn, summary);
+  after();
+  var NA = '정보 없음';
+  var srcLabel = t.source === '수집 데이터' ? COLLECT_LABEL : t.source;
+  return h('div', null,
+    h('section', { class: 'sec stack' },
+      h('h1', { class: 'h1' }, '예매 테스트 조건 확인'),
+      h('div', { class: 'msg msg--good stack', id: 'targetBox' },
+        h('p', null, t.title + ' 조건으로 테스트합니다. 실제 예매처 화면과 무관한 가상 시뮬레이션입니다.'),
+        h('div', { class: 'row' }, btn('테스트 대상 해제', 'btn--sm', function () {
+          S.target = null; save('target');
+          if (S.practiceSetting && S.practiceSetting.fromTarget) { S.practiceSetting = null; save('practiceSetting'); }
+          render();
+        })))),
+    h('section', { class: 'sec stack' },
+      h('div', { class: 'row' }, h('h2', { class: 'h2', style: 'margin:0' }, '실제 예매 조건'), srcTag(srcLabel)),
+      h('div', { class: 'tbl tbl--fit', id: 'realCond' }, h('table', null, h('tbody', null,
+        h('tr', null, h('th', { scope: 'row' }, '예매처'), h('td', { class: 'any' }, t.seller || NA)),
+        h('tr', null, h('th', { scope: 'row' }, '예매 오픈'), h('td', { class: 'any' }, t.openText || NA)),
+        h('tr', null, h('th', { scope: 'row' }, '1인 구매 한도'), h('td', null, t.limit ? t.limit + '매' : NA)))))),
+    h('section', { class: 'sec stack' },
+      h('h2', { class: 'h2' }, '테스트 설정'),
+      gameGroup, gradeGroup, buyGroup,
+      field('대기 인원', qSel), diff,
+      h('details', { class: 'box', id: 'focusDetails', open: !!sel.focus }, h('summary', null, '단계별 집중 연습'), h('div', { style: 'margin-top:8px' }, field('집중 단계', fSel))),
+      h('p', { class: 'small muted' }, '판매 좌석 ' + num(t.seats) + '석 기준입니다. 경기 선택은 표시 이름과 구장만 바꿉니다.')),
+    h('section', { class: 'sec' }, area),
+    h('section', { class: 'sec stack' },
+      h('a', { class: 'btn', href: SITE_URL, target: '_blank', rel: 'noopener noreferrer' }, '전체 기능 연습 사이트 열기'),
+      h('p', { class: 'small muted' }, '대기열과 좌석을 더 실제에 가깝게 연습합니다.')));
 }
 
 /* ---------- S9 맞춤 연습 ---------- */
 function scrPractice() {
-  var base = practiceBase();
-  var ps = S.practiceSetting || { queueSize: currentQueue(), focus: null, source: '규칙 분석' };
+  // 예매 테스트 대상(target)이 있으면 지킴이나 등록한 공지보다 대상 조건을 우선해 조건 확인 화면을 그립니다.
+  if (S.target) return scrTargetTest(S.target);
+  var t = null;
+  var base = (function () { var b = practiceBase(); b.seats = SEATS_FOR_SALE; return b; })();
+  var ps = S.practiceSetting && !S.practiceSetting.fromTarget ? S.practiceSetting : { queueSize: currentQueue(), focus: null, source: '규칙 분석' };
+  var targetBox = null;
   var qSel = h('select', { id: uid('q') }, QUEUE_SIZES.map(function (q) { return h('option', { value: String(q), selected: q === ps.queueSize }, num(q) + '명'); }));
   var fSel = h('select', { id: uid('f') }, [['', '전체 진행'], ['reaction', '반응 5회'], ['captcha', '보안문자 5회'], ['seat', '좌석 선택 5회']].map(function (o) { return h('option', { value: o[0], selected: (ps.focus || '') === o[0] }, o[1]); }));
   function persist() { S.practiceSetting = { queueSize: +qSel.value, focus: fSel.value || null, source: '직접 입력' }; save('practiceSetting'); }
@@ -2428,7 +3010,7 @@ function scrPractice() {
   var area = h('div', { class: 'stack' });
   function start() {
     var focus = fSel.value || null;
-    practiceEngine(area, { kind: focus ? '집중' : '맞춤', queueSize: +qSel.value, seats: SEATS_FOR_SALE, grades: base.grades, buy: base.buy, queueMs: [3000, 6000], focus: focus }, function (rec, msg) {
+    practiceEngine(area, { kind: focus ? '집중' : '맞춤', queueSize: +qSel.value, seats: base.seats, grades: base.grades, buy: base.buy, queueMs: [3000, 6000], focus: focus, extra: t ? { targetTitle: t.title } : null }, function (rec, msg) {
       area.replaceChildren(recSummary(rec, msg), h('div', { class: 'row' }, btn('코치 리포트 보기', 'btn--primary btn--big', function () { go('coach'); }), btn('다시 연습', null, start)));
     });
   }
@@ -2436,12 +3018,14 @@ function scrPractice() {
   return h('div', null,
     h('section', { class: 'sec stack' },
       h('h1', { class: 'h1' }, '맞춤 연습'),
-      h('div', { class: 'row' }, h('span', { class: 'lbl' }, '현재 설정'), srcTag(ps.source)),
-      h('dl', { class: 'kv' },
+      targetBox,
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, '현재 설정'), srcTag(ps.source === '수집 데이터' ? COLLECT_LABEL : ps.source)),
+      h('dl', { class: 'kv', id: 'practiceKv' },
         h('dt', null, '행사'), h('dd', null, base.info ? base.info.event : '예시 행사'),
         h('dt', null, '구장'), h('dd', null, base.venue),
-        h('dt', null, '좌석 등급'), h('dd', null, base.grades.join(', ')),
-        h('dt', null, '구매 한도'), h('dd', null, (base.limit ? base.limit + '매' : '미입력') + ', 연습 매수 ' + base.buy + '매')),
+        h('dt', null, '좌석 등급'), h('dd', null, base.grades.join(', ') + (t && t.virtual ? '(가상 등급)' : '')),
+        h('dt', null, '구매 한도'), h('dd', null, (base.limit ? base.limit + '매' : '미입력') + ', 연습 매수 ' + base.buy + '매'),
+        h('dt', null, '판매 좌석'), h('dd', null, num(base.seats) + '석')),
       h('div', { class: 'two' }, field('대기 인원', qSel), field('집중 단계', fSel))),
     h('section', { class: 'sec' }, area),
     h('section', { class: 'sec stack' },
@@ -2457,9 +3041,11 @@ function scrRecords() {
     h('p', null, '연습 기록, 알림 응답 기록, 실제 예매 결과를 모두 지웁니다. 되돌릴 수 없습니다.'),
     h('div', { class: 'row' }, btn('기록을 지웁니다', 'btn--danger', function () { S.records = []; S.responses = []; S.results = []; save('records'); save('responses'); save('results'); render(); }), btn('취소', null, function () { confirmBox.hidden = true; })));
   var recTable = recs.length ? h('div', { class: 'tbl' }, h('table', null,
-    h('thead', null, h('tr', null, ['시각', '종류', '대기 인원', '반응', '대기순서', '보안문자', '좌석 선택', '결제', '전체', '실패 단계'].map(function (t) { return h('th', null, t); }))),
+    h('thead', null, h('tr', null, ['시각', '행사', '종류', '대기 인원', '반응', '대기순서', '보안문자', '좌석 선택', '결제', '전체', '실패 단계'].map(function (t) { return h('th', null, t); }))),
     h('tbody', null, recs.map(function (r) {
-      return h('tr', null, h('td', { class: 'mono' }, fmtStamp(r.at)), h('td', null, r.kind + (r.focus ? '(' + STAGE_LABEL[r.focus] + ')' : '')), h('td', { class: 'mono' }, num(r.queueSize)),
+      return h('tr', null, h('td', { class: 'mono' }, fmtStamp(r.at)),
+        h('td', null, r.eventName ? r.eventName + (r.grade ? ', ' + r.grade : '') + (r.buy ? ', ' + r.buy + '매' : '') : (r.targetTitle || '-')),
+        h('td', null, r.kind + (r.focus ? '(' + STAGE_LABEL[r.focus] + ')' : '')), h('td', { class: 'mono' }, num(r.queueSize)),
         h('td', { class: 'mono' }, fmtMs(r.reactionMs)), h('td', { class: 'mono' }, r.queueRank == null ? '-' : num(r.queueRank)), h('td', { class: 'mono' }, fmtSec(r.captchaMs)),
         h('td', { class: 'mono' }, fmtSec(r.seatMs)), h('td', { class: 'mono' }, fmtSec(r.payMs)), h('td', { class: 'mono' }, fmtSec(r.totalMs)), h('td', null, r.failStage ? STAGE_LABEL[r.failStage] : '-'));
     })))) : h('p', { class: 'msg' }, '연습 기록이 없습니다.');
@@ -2484,7 +3070,7 @@ function scrRecords() {
     h('section', { class: 'sec stack' }, h('div', { class: 'row' }, btn('기록 지우기', null, function () { confirmBox.hidden = false; }), btn('코치 리포트 보기', null, function () { go('coach'); })), confirmBox));
 }
 
-var SCREENS = { home: scrHome, goal: scrGoal, schedule: scrSchedule, result: scrResult, notice: scrNotice, confirm: scrConfirm, situation: scrSituation, alerts: scrAlerts, keeper: scrKeeper, warmup: scrWarmup, check: scrCheck, coach: scrCoach, practice: scrPractice, records: scrRecords };
+var SCREENS = { home: scrHome, find: scrFind, pick: scrPick, schedule: scrSchedule, result: scrResult, notice: scrNotice, confirm: scrConfirm, situation: scrSituation, alerts: scrAlerts, keeper: scrKeeper, warmup: scrWarmup, check: scrCheck, coach: scrCoach, practice: scrPractice, records: scrRecords };
 
 window.addEventListener('hashchange', render);
 document.addEventListener('visibilitychange', function () {
