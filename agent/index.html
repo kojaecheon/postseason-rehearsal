@@ -1121,8 +1121,9 @@ function openRealKeeper() {
 
 /* ---------- 라우팅 ---------- */
 var ROUTES = ['home', 'find', 'pick', 'notice', 'confirm', 'situation', 'schedule', 'alerts', 'keeper', 'warmup', 'check', 'result', 'coach', 'practice', 'records'];
-var STEP_OF = { home: 0, find: 0, pick: 0, notice: 0, confirm: 1, situation: 2, schedule: 2, alerts: 3, keeper: 4, warmup: 5, check: 5, coach: 6 };
-var STEPS = ['예매 찾기', '값 확인', '준비 일정', '알림 등록', '지킴이 화면', '워밍업 연습', '코치 리포트'];
+// 순서 표시는 모든 화면에서 여섯 단계 하나로 통일합니다. 선택한 예매 정보와 읽은 값 확인은 「예매 시기 확인」, 준비 일정과 알림 등록은 「알림 걸기」, 지킴이 화면부터 예매 결과 기록까지는 「예매 당일」입니다.
+var STEP_OF = { home: 0, find: 0, notice: 0, pick: 1, confirm: 1, practice: 2, coach: 3, situation: 4, schedule: 4, alerts: 4, keeper: 5, warmup: 5, check: 5, result: 5 };
+var STEPS = ['예매 찾기', '예매 시기 확인', '예매 테스트', '코치 리포트', '알림 걸기', '예매 당일'];
 var TITLES = { home: '홈', find: '예매 찾기', pick: '선택한 예매 정보', notice: '공지 등록', confirm: '읽은 값 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
 var cleanups = [], live = [];
 function route() {
@@ -1130,16 +1131,9 @@ function route() {
   if (r === 'goal') return 'find'; // 이전 목표 입력 화면은 예매 찾기로 대체합니다.
   return ROUTES.indexOf(r) >= 0 ? r : 'home';
 }
-// 예매 테스트 대상(target)이 있으면 4단계 표시를 씁니다. 예매 테스트 진행 중과 결과 요약은 stepOverride 로 3단계를 표시합니다.
-var TARGET_STEPS = ['예매 찾기', '조건 확인', '예매 테스트', '코치 리포트'];
-var TARGET_STEP_OF = { find: 0, pick: 0, practice: 1, coach: 3 };
-var stepOverride = null;
 function renderSteps(r) {
-  // 예매 테스트 경로의 화면(예매 찾기, 선택한 예매 정보, 조건 확인, 코치 리포트)에서만 4단계 표시를 씁니다. 지킴이, 알림 등록 같은 화면은 target 이 남아 있어도 7단계 표시를 씁니다.
-  var useTarget = !!S.target && TARGET_STEP_OF[r] != null;
-  var list = useTarget ? TARGET_STEPS : STEPS;
-  var cur = useTarget ? (stepOverride != null && r === 'practice' ? stepOverride : TARGET_STEP_OF[r]) : STEP_OF[r];
-  $('#steps').replaceChildren.apply($('#steps'), list.map(function (s, i) {
+  var cur = STEP_OF[r];
+  $('#steps').replaceChildren.apply($('#steps'), STEPS.map(function (s, i) {
     return h('li', { 'aria-current': i === cur ? 'step' : null }, h('span', { class: 'no' }, (i + 1) + '. '), s);
   }));
 }
@@ -1148,7 +1142,6 @@ function render() {
   cleanups = []; live = [];
   if (location.hash === '#goal') { try { history.replaceState(null, '', '#find'); } catch (e) { /* 무시 */ } }
   var r = route();
-  stepOverride = null;
   renderSteps(r);
   var view = $('#view');
   try {
@@ -3126,7 +3119,6 @@ function scrTargetTest(t) {
   var area = h('div', { class: 'stack' });
   function start() {
     var focus = sel.focus;
-    stepOverride = 2; renderSteps(route()); // 예매 테스트 진행 중과 결과 요약은 「3. 예매 테스트」
     practiceEngine(area, {
       kind: focus ? '집중' : '맞춤', queueSize: sel.queueSize, seats: t.seats, grades: t.grades, prefGrade: sel.grade, buy: sel.buy,
       queueMs: [3000, 6000], focus: focus, header: eventName() + ' · ' + sel.grade + (t.virtual ? '(가상 등급)' : '') + ' · ' + sel.buy + '매',
