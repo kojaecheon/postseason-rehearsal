@@ -290,6 +290,14 @@ function fmtRemain(ms) {
   if (r.h) return r.h + '시간 ' + r.m + '분 ' + r.s + '초';
   return r.m + '분 ' + r.s + '초';
 }
+// 예매 오픈까지 남은 시간(하루 이상 「4일 뒤」, 하루 미만 「5시간 뒤」, 한 시간 미만 「30분 뒤」). F2, S4, 홈 카드, 코치 리포트가 같이 씁니다.
+function remainShort(openAt) {
+  var ms = openAt - Date.now();
+  if (!(ms > 0)) return '예매 오픈 시각이 지났습니다';
+  if (ms >= 86400000) return Math.floor(ms / 86400000) + '일 뒤';
+  if (ms >= 3600000) return Math.floor(ms / 3600000) + '시간 뒤';
+  return Math.max(1, Math.ceil(ms / 60000)) + '분 뒤';
+}
 function fmtSec(ms) { return ms == null ? '-' : (ms / 1000).toFixed(1) + '초'; }
 function fmtMs(ms) { return ms == null ? '-' : Math.round(ms) + 'ms'; }
 function isoLocal(ms) {
@@ -486,7 +494,10 @@ function cleanTarget(t) {
     ended: t.ended === true,
     whereToCheck: Array.isArray(t.whereToCheck) ? t.whereToCheck.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
     pastOpen: typeof t.pastOpen === 'string' && t.pastOpen.trim() ? clip(wellFormed(t.pastOpen), 200) : null,
-    sourceUrl: safeHttps(t.sourceUrl)
+    sourceUrl: safeHttps(t.sourceUrl),
+    // 예매 10분 전 알림 걸기에 쓰는 값(예매 오픈 일시, 예매 페이지 주소). 구장은 venue 를 씁니다.
+    openAt: finNum(t.openAt) ? t.openAt : null,
+    sellerUrl: safeHttps(t.sellerUrl)
   };
 }
 var S;
@@ -646,7 +657,7 @@ function buildExamples() {
       resp: baseballResp(), plan: baseballPlan
     },
     inject: {
-      label: '지시문이 섞인 공지(방어 시연)', type: 'text', text: injectText, resp: baseballResp(), plan: baseballPlan
+      label: '지시문이 섞인 공지(방어 확인)', type: 'text', text: injectText, resp: baseballResp(), plan: baseballPlan
     }
   };
 }
@@ -835,7 +846,7 @@ function validateCoach(o) {
 function aiPanel(o) {
   var fails = 0, tab = 'helpy';
   var tHelpy = h('button', { type: 'button', role: 'tab', 'aria-selected': 'true' }, 'Helpy Chat 연동');
-  var tEx = h('button', { type: 'button', role: 'tab', 'aria-selected': 'false' }, '예시 응답으로 시연');
+  var tEx = h('button', { type: 'button', role: 'tab', 'aria-selected': 'false' }, '예시 응답으로 체험');
   var promptTa = h('textarea', { class: 'code any', rows: 8, readOnly: true, id: uid('prompt') });
   var noteEl = h('p', { class: 'msg small' });
   var copyMsg = h('p', { class: 'muted small', 'aria-live': 'polite' });
@@ -1058,7 +1069,7 @@ function stageOf(k, now) {
 function setFlash(on) { document.body.classList.toggle('flash', !!on); }
 function keeperAlerting() { return !!(keeper && !keeper.responded && ['w1', 'w2', 'w3', 'open'].indexOf(keeper.stage) >= 0); }
 function onStageEnter(st) {
-  var k = keeper, ev = k.info.event, pre = k.demo ? '[시연] ' : '';
+  var k = keeper, ev = k.info.event, pre = k.demo ? '[체험] ' : '';
   if (st === 'w1') { notify(pre + '예매 10분 전입니다', ev + ' 예매 오픈 10분 전입니다. 자리에 앉아 응답해 주세요.', 'w1'); vibrate([300, 150, 300, 150, 300]); }
   else if (st === 'w2') { notify(pre + '응답이 없습니다', ev + ' 예매가 곧 시작됩니다. 지킴이 화면에서 응답해 주세요.', 'w2'); vibrate([600, 200, 600]); }
   else if (st === 'w3') vibrate([800, 200, 800, 200, 800]);
@@ -1174,7 +1185,7 @@ function updateStrip() {
   var strip = $('#strip'), r = route();
   if (!keeper || r === 'keeper' || keeper.stage === 'end') { strip.hidden = true; return; }
   if (!stripEls) {
-    stripEls = { demo: h('span', { class: 'demo-flag' }, '시연 모드'), time: h('span', { class: 'mono' }), badge: h('span', { class: 'badge' }) };
+    stripEls = { demo: h('span', { class: 'demo-flag' }, '체험 모드'), time: h('span', { class: 'mono' }), badge: h('span', { class: 'badge' }) };
     strip.replaceChildren(h('div', { class: 'strip__in' }, stripEls.demo, h('strong', null, '지킴이 화면'), stripEls.time, stripEls.badge, h('a', { href: '#keeper' }, '지킴이 화면으로')));
   }
   var remain = keeper.openAt - Date.now(), alerting = keeperAlerting();
@@ -1202,7 +1213,76 @@ function sameEvent(a, b) { var x = normEvent(a); return !!x && x === normEvent(b
 function replaceWarn(event, openAt) {
   var n = S.notice;
   if (!n || (sameEvent(n.event, event) && n.openAt === openAt)) return null;
-  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 공지(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.');
+  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.');
+}
+// 공지 저장(S2 확정과 예매 10분 전 알림 걸기가 함께 씁니다).
+// opts.fromGoalCard: 대기 카드에서 들어온 경우 대기 목표를 지웁니다. opts.keepSameTarget: 같은 행사의 예매 테스트 대상은 유지합니다.
+function commitNotice(fields, opts) {
+  opts = opts || {};
+  fields.id = 'n' + Date.now();
+  fields.savedAt = Date.now();
+  S.notice = fields;
+  save('notice');
+  if (keeper) endKeeper();
+  // 공지 대기 목표 정리: 대기 카드에서 들어왔거나 행사 이름이 같을 때만 지웁니다. 무관한 대기 목표는 남깁니다.
+  if (S.goal && (opts.fromGoalCard || sameEvent(S.goal.event, S.notice.event))) { S.goal = null; save('goal'); }
+  // 같은 대화에서 다른 후보를 이어서 확정해도 새로 저장한 대기 목표가 지워지지 않게 합니다.
+  if (findState) findState.fromCard = false;
+  // 예매 테스트 대상: S2 확정은 해제하고, 알림 걸기는 같은 행사이면 유지합니다(알림을 건 뒤에도 같은 예매 테스트를 이어서 하기 위함).
+  var keep = opts.keepSameTarget && S.target && sameEvent(S.target.title, S.notice.event);
+  if (S.target && !keep) {
+    S.target = null; save('target');
+    if (S.practiceSetting && S.practiceSetting.fromTarget) { S.practiceSetting = null; save('practiceSetting'); }
+  }
+}
+// 이 후보로 이미 알림을 걸었는지(같은 행사, 같은 예매 오픈 일시)
+function alertSetFor(c) { return !!(S.notice && sameEvent(S.notice.event, c.title) && S.notice.openAt === c.openAt); }
+// 예매 10분 전 알림 걸기: 후보의 값으로 공지를 저장하고 기본 계획을 만든 뒤 알림 등록 화면을 엽니다(S2, S3, G2 를 거치지 않습니다).
+function armAlert(c) {
+  var ev = c.sources && c.sources[0] ? c.sources[0].evidence : null;
+  commitNotice({
+    event: c.title, venue: c.venue || null, openAt: c.openAt, seller: c.seller || null,
+    limitPerPerson: Number.isInteger(c.limit) ? c.limit : null, seatGrades: [], presale: null,
+    evidence: { event: ev, openAt: ev, seller: c.seller ? ev : null }, source: c.source,
+    inputType: 'text', rawText: null, sellerUrl: safeHttps(c.sellerUrl) || null,
+    exampleId: c.source === '예시 응답' ? 'goalAnnounced' : null
+  }, { fromGoalCard: !!(findState && findState.fromCard), keepSameTarget: true });
+  if (!S.plan || S.plan.noticeId !== S.notice.id) savePlan(defaultPlan('pc'), '규칙 분석', '', 'pc');
+  go('alerts');
+}
+// 「예매 10분 전 알림 걸기」 버튼. 다른 공지가 등록돼 있으면 교체 안내를 보여 주고 확인을 받은 뒤 겁니다.
+// cb 가 있으면(AI 응답 후보) 출처 확인 체크를 해야 활성화됩니다.
+function alertButton(c, cb, cls) {
+  var box = h('div', { class: 'msg msg--warn small stack', id: 'alertReplaceWarn', hidden: true });
+  var b = btn('예매 10분 전 알림 걸기', cls || 'btn--primary', function () {
+    // 같은 예매에 이미 알림을 걸었으면 다시 저장하지 않고 알림 등록 화면만 엽니다. 다시 저장하면 준비 계획과 지킴이 상태가 초기화됩니다.
+    if (alertSetFor(c)) { go('alerts'); return; }
+    if (cb && !cb.checked) return;
+    var n = S.notice;
+    if (n && !(sameEvent(n.event, c.title) && n.openAt === c.openAt)) {
+      box.replaceChildren(
+        h('p', null, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.'),
+        h('div', { class: 'row' },
+          btn('교체합니다', 'btn--primary btn--sm', function () { if (cb && !cb.checked) return; box.hidden = true; armAlert(c); }),
+          btn('취소', 'btn--sm', function () { box.hidden = true; })));
+      box.hidden = false;
+      return;
+    }
+    armAlert(c);
+  });
+  if (cb) b.disabled = !cb.checked;
+  return { btn: b, box: box };
+}
+// 등록한 공지(내 예매)의 조건으로 예매 테스트 조건 확인 화면을 엽니다. 같은 행사의 target 이 있으면 그 조건을 그대로 씁니다.
+function testForNotice(n) {
+  if (S.target && sameEvent(S.target.title, n.event)) { go('practice'); return; }
+  var grades = n.seatGrades && n.seatGrades.length ? n.seatGrades.slice(0, 8) : ['R석', 'S석', 'A석'];
+  startTest({
+    id: 'notice-' + n.id, title: n.event || '행사 이름 미입력', category: 'etc', status: 'upcoming', endDate: null,
+    venue: n.venue, seller: n.seller, sellerUrl: n.sellerUrl, openAt: n.openAt, openText: null, limit: n.limitPerPerson,
+    source: n.source, sources: [], games: [], whereToCheck: [],
+    practice: { queueSize: S.plan && S.plan.noticeId === n.id ? S.plan.queueSize : 80000, seats: 20000, limit: 4, grades: grades, virtual: !(n.seatGrades && n.seatGrades.length) }
+  });
 }
 function sourceLink(url, isExample) {
   if (!url) return h('span', { class: 'muted' }, '출처 주소 없음');
@@ -1213,10 +1293,10 @@ function scrHome() {
   var n = S.notice;
   var card = null;
   if (n) {
-    var remainEl = h('span', { class: 'mono' });
-    live.push(function () { var ms = n.openAt - Date.now(); remainEl.textContent = ms > 0 ? fmtRemain(ms) : '오픈 시각이 지났습니다'; });
+    var remainEl = h('span', { id: 'myRemain' });
+    live.push(function () { setText(remainEl, remainShort(n.openAt)); });
     var confirmBox = h('div', { class: 'msg msg--warn', hidden: true },
-      h('p', null, '등록한 공지와 알림 계획을 삭제합니다. 연습 기록은 유지됩니다.'),
+      h('p', null, '내 예매와 알림 계획을 삭제합니다. 연습 기록은 유지됩니다.'),
       h('div', { class: 'row' }, btn('삭제합니다', 'btn--danger', function () {
         if (keeper && !keeper.demo && keeper.noticeId === n.id) endKeeper();
         S.notice = null; S.plan = null; save('notice'); save('plan'); render();
@@ -1225,8 +1305,8 @@ function scrHome() {
     var todayKey = dayKey(Date.now());
     var todays = plan ? plan.schedule.filter(function (s) { return s.date === todayKey; }) : [];
     var passed = n.openAt < Date.now();
-    card = h('section', { class: 'sec' },
-      h('h2', { class: 'h2' }, '등록한 공지'),
+    card = h('section', { class: 'sec', id: 'myBooking' },
+      h('h2', { class: 'h2' }, '내 예매'),
       h('div', { class: 'box stack' },
         h('p', { class: 'h3' }, n.event || '행사 이름 미입력'),
         h('dl', { class: 'kv' }, h('dt', null, '예매 오픈 일시'), h('dd', null, fmtDT(n.openAt)), h('dt', null, '남은 시간'), h('dd', null, remainEl)),
@@ -1234,11 +1314,12 @@ function scrHome() {
           todays.length ? h('ul', { class: 'plain', id: 'todayTasks' }, todays.map(function (s) { return h('li', null, s.title); }))
             : h('p', { class: 'small muted' }, plan ? '오늘 예정된 준비 일정이 없습니다.' : '준비 일정이 없습니다. 상황 입력을 마치면 준비 일정을 작성합니다.')),
         h('div', { class: 'row' },
-          btn('지킴이 화면 열기', 'btn--primary', openRealKeeper),
+          btn('예매 테스트', 'btn--primary', function () { testForNotice(n); }),
+          btn('지킴이 화면', null, openRealKeeper),
+          btn('알림 등록', null, function () { go('alerts'); }),
           btn('준비 일정 보기', null, function () { go('schedule'); }),
-          btn('알림 등록 다시 보기', null, function () { go('alerts'); }),
           passed ? btn('예매 결과 기록', 'btn--primary', function () { go('result'); }) : null,
-          btn('공지 삭제', null, function () { confirmBox.hidden = false; })),
+          btn('내 예매 삭제', null, function () { confirmBox.hidden = false; })),
         confirmBox));
   }
   var goalCard = null;
@@ -1273,14 +1354,14 @@ function scrHome() {
       h('div', { class: 'cats', style: 'margin-top:12px' }, cats)),
     goalCard,
     h('section', { class: 'sec' },
-      h('h2', { class: 'h2' }, '시연'),
+      h('h2', { class: 'h2' }, '체험해 보기'),
       h('div', { class: 'stack' },
         h('div', { class: 'demo' },
-          btn('10분 전 알림 시연', 'btn--primary btn--big', function () { startDemo(exampleInfo()); }),
-          h('p', { class: 'small muted' }, '약 2분 소요. 예시 공지로 경고 1단계부터 3단계, 오픈, 종료까지 줄인 시간으로 진행합니다. 소리가 납니다.')),
+          btn('10분 전 알림 체험', 'btn--primary btn--big', function () { startDemo(exampleInfo()); }),
+          h('p', { class: 'small muted' }, '약 2분 소요. 예시 예매로 경고 1단계부터 3단계, 오픈, 종료까지 줄인 시간으로 진행합니다. 소리가 납니다.')),
         h('div', { class: 'demo' },
-          btn('전체 흐름 시연', null, function () { flowDemo = true; findOpen('etc', { demo: true }); }),
-          h('p', { class: 'small muted' }, '약 5분 소요. 예시 문장으로 예매 찾기를 시작해 선택한 예매 정보, 값 확인, 준비 일정, 알림 등록, 지킴이 화면, 코치 리포트까지 진행합니다.')))),
+          btn('예매 준비 과정 체험', null, function () { flowDemo = true; findOpen('etc', { demo: true }); }),
+          h('p', { class: 'small muted' }, '약 5분 소요. 예시 예매로 예매 찾기부터 준비 일정, 알림 등록, 10분 전 알림까지 단계마다 직접 눌러 진행합니다.')))),
     card,
     h('section', { class: 'sec' },
       h('h2', { class: 'h2' }, '서비스 구성'),
@@ -1583,7 +1664,7 @@ function scrFind() {
         getPrompt: function () { return findPrompt(q, st.category); },
         note: function () { return 'Helpy Chat 입력창의 + 버튼에서 웹 검색을 선택한 뒤 보내세요.'; },
         example: function () { return q === FIND_EXAMPLE ? exampleFindResp() : null; },
-        exampleMissing: '예시 응답은 시연용 예시 문장에서만 사용할 수 있습니다.',
+        exampleMissing: '예시 응답은 체험용 예시 문장에서만 사용할 수 있습니다.',
         validate: validateFind,
         onApply: function (list, source) { addMsg({ who: 'svc', text: 'AI 웹 검색 결과입니다.', cands: list.map(function (x) { return aiToCand(x, source); }), src: source }); },
         fallbackLabel: '예매 정보 직접 입력',
@@ -1606,7 +1687,7 @@ function scrFind() {
     if (st.demo) {
       addMsg({ who: 'user', text: FIND_EXAMPLE });
       st.lastQuery = FIND_EXAMPLE;
-      addMsg({ who: 'svc', text: '시연용 예시 문장입니다. AI 웹 검색 요청문과 예시 응답으로 진행합니다.', ai: { query: FIND_EXAMPLE, startExample: true } });
+      addMsg({ who: 'svc', text: '체험용 예시 문장입니다. AI 웹 검색 요청문과 예시 응답으로 진행합니다.', ai: { query: FIND_EXAMPLE, startExample: true } });
     }
   }
   if (st.send) { var s0 = st.send; st.send = null; submitText(s0); }
@@ -1631,7 +1712,8 @@ function startTest(c) {
     limit: c.limit || null, grades: p.grades.slice(), virtual: !!p.virtual, source: c.source,
     seller: c.seller || null, openText: c.openAt ? fmtDT(c.openAt) : (c.openText || null), games: games, savedAt: Date.now(),
     ended: effStatus(c) === 'ended', whereToCheck: (c.whereToCheck || []).slice(0, 5), pastOpen: pastOpenText(c),
-    sourceUrl: c.sources && c.sources[0] ? c.sources[0].url : null
+    sourceUrl: c.sources && c.sources[0] ? c.sources[0].url : null,
+    openAt: c.openAt || null, sellerUrl: c.sellerUrl || null
   };
   save('target');
   S.practiceSetting = { queueSize: p.queueSize, focus: null, source: c.source, fromTarget: true, game: games.length ? 0 : null, grade: p.grades[0], buy: Math.min(2, c.limit || 4) };
@@ -1643,8 +1725,9 @@ function waitGoalEvent(c, nextOf) { return nextOf ? c.title + ' 다음 예매' :
 function pastOpenText(c) { return effStatus(c) === 'ended' ? (c.openAt ? fmtDT(c.openAt) : (c.openText || null)) : null; }
 // 코치 리포트에서 공지 대기로 저장할 때 target 을 후보 형식으로 바꿉니다(F2 와 같은 저장 규칙을 씁니다).
 function targetAsCand(t) {
-  return { title: t.title, status: t.ended ? 'ended' : 'on_sale', endDate: null, openAt: null, openText: t.pastOpen, expected: null,
-    whereToCheck: t.whereToCheck, sources: t.sourceUrl ? [{ url: t.sourceUrl }] : [], source: t.source, query: t.title };
+  return { title: t.title, status: t.ended ? 'ended' : 'on_sale', endDate: null, openAt: t.ended ? null : t.openAt, openText: t.pastOpen, expected: null,
+    whereToCheck: t.whereToCheck, sources: t.sourceUrl ? [{ url: t.sourceUrl }] : [], source: t.source, query: t.title,
+    venue: t.venue, seller: t.seller, sellerUrl: t.sellerUrl, limit: t.limit };
 }
 // 공지 대기로 저장 버튼. 다른 행사의 대기 목표가 이미 있으면 교체 안내를 보여 주고 확인을 받은 뒤 저장합니다.
 function waitGoalButton(label, cls, c, nextOf, done) {
@@ -1715,7 +1798,17 @@ function scrPick() {
   }
   var savedMsg = h('p', { class: 'small', 'aria-live': 'polite' });
   function saved() { savedMsg.replaceChildren('공지 대기로 저장했습니다. 홈 화면에 표시합니다. ', h('a', { href: '#home' }, '홈으로')); }
-  var testBtn = btn('이 예매 조건으로 예매 테스트', s === 'ended' ? 'btn--primary' : null, function () { startTest(c); });
+  var testBtn = btn('이 예매 조건으로 예매 테스트', s === 'ended' || s === 'upcoming' ? 'btn--primary' : null, function () { startTest(c); });
+  // 예매 시기 상자
+  var past = pastOpenText(c);
+  var whenBox = h('div', { class: 'box box--soft stack', id: 'pickWhen', style: 'gap:2px' }, h('p', { class: 'lbl' }, '예매 시기'),
+    s === 'upcoming' && c.openAt ? [h('p', null, '예매 오픈: ' + fmtShort(c.openAt)), h('p', { class: 'small' }, c.openAt > Date.now() ? '남은 시간: ' + remainShort(c.openAt) : remainShort(c.openAt))]
+      : s === 'on_sale' ? [h('p', null, '예매 중입니다.'), c.period ? h('p', { class: 'small' }, '기간: ' + c.period) : null]
+      : s === 'not_announced' ? [h('p', null, '예매 오픈 일시가 아직 나오지 않았습니다.'), c.expected ? h('p', { class: 'small' }, '예상 시기: ' + c.expected) : null]
+      : [h('p', null, '종료된 예매입니다.'), past ? h('p', { class: 'small' }, '지난 예매 오픈: ' + past) : null]);
+  // 알림 걸기를 할 수 없는 상태의 안내
+  var alertNote = s === 'ended' ? h('p', { class: 'small muted', id: 'alertNote' }, '다음 예매 일정이 나오면 알림을 걸 수 있습니다.')
+    : s === 'not_announced' ? h('p', { class: 'small muted', id: 'alertNote' }, '예매 오픈 일시가 나오면 알림을 걸 수 있습니다.') : null;
   var actions = [], goalWarn = null;
   if (s === 'ended') {
     var wg = waitGoalButton('다음 예매 공지 대기로 저장', null, c, true, saved);
@@ -1728,11 +1821,17 @@ function scrPick() {
     actions.push(wg2.btn, btn('확인 알림 일정 파일 내려받기', null, function () { downloadGoalIcs(c.title); }));
     goalWarn = wg2.box;
   }
-  var prep = null;
+  var prep = null, cbLabel = null;
   if (s === 'upcoming') {
     var cb = isAi ? h('input', { type: 'checkbox', id: uid('pchk') }) : null;
-    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처 확인에 체크하면 진행합니다.');
-    var prepBtn = btn('이 예매 준비 시작', 'btn--primary btn--big', function () {
+    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처 확인에 체크하면 알림 걸기와 준비 일정 만들기를 진행합니다.');
+    // 주 버튼: 예매 테스트(체크 없이 가능)와 예매 10분 전 알림 걸기(AI 응답이면 출처 확인 체크 필요)
+    // 이미 이 예매에 알림을 걸었으면 다시 걸지 않고 알림 등록 화면으로 가는 버튼을 둡니다.
+    var already = alertSetFor(c);
+    var ab = alertButton(c, cb, 'btn--primary');
+    actions.push(testBtn, already ? btn('알림 등록 보기', null, function () { go('alerts'); }) : ab.btn);
+    goalWarn = already ? h('p', { class: 'msg msg--good small', id: 'pickAlertDone' }, '이 예매에 알림을 걸었습니다(' + fmtDT(c.openAt) + ').') : ab.box;
+    var prepBtn = btn('값을 확인하고 준비 일정 만들기', null, function () {
       if (cb && !cb.checked) return;
       var ev = c.sources[0] ? c.sources[0].evidence : null;
       draft = {
@@ -1747,12 +1846,11 @@ function scrPick() {
       go('confirm');
     });
     if (cb) {
-      prepBtn.disabled = true; prepBtn.setAttribute('aria-describedby', hint.id);
-      cb.addEventListener('change', function () { prepBtn.disabled = !cb.checked; hint.hidden = cb.checked; });
+      prepBtn.disabled = true; prepBtn.setAttribute('aria-describedby', hint.id); ab.btn.setAttribute('aria-describedby', hint.id);
+      cb.addEventListener('change', function () { prepBtn.disabled = !cb.checked; ab.btn.disabled = !cb.checked; hint.hidden = cb.checked; });
     } else hint.hidden = true;
-    prep = h('div', { class: 'stack' },
-      cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처 공지에서 예매 오픈 일시를 확인했습니다' : '공식 공지에서 예매 오픈 일시를 직접 확인했습니다') : null,
-      replaceWarn(c.title, c.openAt), prepBtn, hint);
+    cbLabel = cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처 공지에서 예매 오픈 일시를 확인했습니다' : '공식 공지에서 예매 오픈 일시를 직접 확인했습니다') : null;
+    prep = h('div', { class: 'stack' }, hint, replaceWarn(c.title, c.openAt), h('div', { class: 'row' }, prepBtn));
   }
   var delGoal = s === 'ended' && S.goal && findState && findState.fromCard && sameEvent(S.goal.event, c.title) ? h('div', { class: 'msg msg--warn stack', id: 'endedGoal' },
     h('p', null, '공지 대기 목표(' + S.goal.event + ')의 행사가 종료됐습니다. 공지 대기 목표를 삭제하세요.'),
@@ -1762,6 +1860,7 @@ function scrPick() {
       h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '선택한 예매 정보'), btn('예매 찾기로', 'btn--sm', function () { findState ? go('find') : findOpen(c.category); })),
       endedBox,
       h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s]), srcTag(sourceLabel(c))),
+      whenBox,
       table),
     h('section', { class: 'sec stack' },
       h('h2', { class: 'h2' }, '출처'),
@@ -1769,14 +1868,15 @@ function scrPick() {
       srcList),
     h('section', { class: 'sec stack' },
       h('h2', { class: 'h2' }, '다음 단계'),
+      cbLabel,
       actions.length ? h('div', { class: 'row' }, actions) : null,
-      goalWarn, prep, savedMsg, delGoal,
+      alertNote, goalWarn, prep, savedMsg, delGoal,
       h('p', { class: 'small muted' }, '예매 테스트는 가상 시뮬레이션입니다. 실제 예매처에 접속하지 않습니다.')));
 }
 
 /* ---------- S1 공지 등록 ---------- */
 var draft = { type: 'text', typeManual: false, text: '', imageUrl: null, imageName: '', exampleId: null, result: null };
-// 「전체 흐름 시연」으로 들어오면 AI 요청 패널을 예시 응답 탭으로 시작합니다.
+// 「예매 준비 과정 체험」으로 들어오면 AI 요청 패널을 예시 응답 탭으로 시작합니다.
 var flowDemo = false;
 // fromGoalCard: 공지 대기 카드의 「공지 등록」으로 들어온 경우. 예시를 골라도 유지하고, fromGoal 은 해제합니다.
 function setDraftExample(id) {
@@ -2002,8 +2102,7 @@ function scrConfirm() {
     var ms = openMs(); if (ms == null) return;
     var lv = limitIn.value.trim();
     var grades = gradeIn.value.split(',').map(function (s) { return clip(s.trim(), 100); }).filter(Boolean).slice(0, 8);
-    S.notice = {
-      id: 'n' + Date.now(),
+    commitNotice({
       event: clip(inputs.event.value.trim(), 100) || null,
       venue: clip(inputs.venue.value.trim(), 100) || null,
       openAt: ms,
@@ -2016,19 +2115,9 @@ function scrConfirm() {
       inputType: res ? draft.type : (S.notice ? S.notice.inputType : 'text'),
       rawText: rawText ? clip(rawText, 8000) : null,
       sellerUrl: safeHttps(urlIn.value) || null,
-      exampleId: res ? draft.exampleId : (S.notice ? S.notice.exampleId : null),
-      savedAt: Date.now()
-    };
-    save('notice');
-    if (keeper) endKeeper();
-    // 공지 대기 목표 정리: 대기 카드에서 들어왔거나 행사 이름이 같을 때만 지웁니다. 무관한 대기 목표는 남깁니다.
-    if (S.goal && ((res && draft.fromGoalCard) || sameEvent(S.goal.event, S.notice.event))) { S.goal = null; save('goal'); }
+      exampleId: res ? draft.exampleId : (S.notice ? S.notice.exampleId : null)
+    }, { fromGoalCard: !!(res && draft.fromGoalCard), keepSameTarget: false });
     draft.fromGoalCard = false;
-    // 같은 대화에서 다른 후보를 이어서 확정해도 새로 저장한 대기 목표가 지워지지 않게 합니다.
-    if (findState) findState.fromCard = false;
-    // 실제 공지를 확정하면 이전 예매 테스트 대상과 그 연습 설정을 해제합니다.
-    if (S.target) { S.target = null; save('target'); }
-    if (S.practiceSetting && S.practiceSetting.fromTarget) { S.practiceSetting = null; save('practiceSetting'); }
     go('situation');
   }
   var checkCount = 0;
@@ -2067,7 +2156,7 @@ function needNotice(title) {
   return h('div', null, h('section', { class: 'sec stack' },
     h('h1', { class: 'h1' }, title),
     h('p', { class: 'msg' }, '등록한 공지가 없습니다. 공지를 먼저 등록하세요.'),
-    h('div', { class: 'row' }, btn('공지 등록', 'btn--primary', function () { go('notice'); }), btn('10분 전 알림 시연', null, function () { startDemo(exampleInfo()); }))));
+    h('div', { class: 'row' }, btn('공지 등록', 'btn--primary', function () { go('notice'); }), btn('10분 전 알림 체험', null, function () { startDemo(exampleInfo()); }))));
 }
 function savePlan(v, source, scheduleText, device) {
   var sched = Array.isArray(v.schedule) && v.schedule.length ? v.schedule : defaultSchedule(S.notice.openAt);
@@ -2287,8 +2376,12 @@ function scrAlerts() {
   return h('div', null,
     h('section', { class: 'sec' },
       h('h1', { class: 'h1' }, '알림 등록'),
-      h('p', { class: 'lead' }, (n.event || '행사') + ', 예매 오픈 일시 ' + fmtDT(n.openAt)),
-      n.openAt < now ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '예매 오픈 일시가 지났습니다. 시연 모드로 지킴이 화면을 확인할 수 있습니다.') : null),
+      // 예매 요약: 행사, 예매 오픈 일시, 남은 시간, 그 예매의 조건으로 예매 테스트
+      h('div', { class: 'box box--soft stack', id: 'alertSummary', style: 'margin-top:8px' },
+        h('p', { class: 'h3', style: 'margin:0' }, n.event || '행사 이름 미입력'),
+        h('dl', { class: 'kv' }, h('dt', null, '예매 오픈 일시'), h('dd', null, fmtDT(n.openAt)), h('dt', null, '남은 시간'), h('dd', null, remainShort(n.openAt))),
+        h('div', { class: 'row' }, btn('예매 테스트', null, function () { testForNotice(n); }))),
+      n.openAt < now ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '예매 오픈 일시가 지났습니다. 체험 모드로 지킴이 화면을 확인할 수 있습니다.') : null),
     h('section', { class: 'sec stack' },
       h('h2', { class: 'h2' }, '캘린더 일정 ' + cal.length + '개'),
       h('p', { class: 'small muted' }, '알림 일정 4개(각 10분)와 준비 일정 ' + prepCount + '개(각 날짜 20:00 시작 30분)입니다. 시작 시각에 알림이 울립니다. 시각은 서비스가 계산합니다.'),
@@ -2310,7 +2403,7 @@ function scrAlerts() {
     h('section', { class: 'sec' },
       h('div', { class: 'grid3' },
         btn('지킴이 화면 열기', 'btn--primary btn--big', openRealKeeper),
-        btn('시연 모드', 'btn--big', function () { startDemo(noticeInfo(n), n.id); }),
+        btn('체험 모드', 'btn--big', function () { startDemo(noticeInfo(n), n.id); }),
         btn('상황 다시 입력', 'btn--big', function () { go('situation'); }))));
 }
 
@@ -2451,21 +2544,21 @@ function scrKeeper() {
   live.push(update);
   update();
   var demoBox = k.demo ? h('div', { class: 'msg stack' },
-    h('p', null, '시연 모드입니다. 시작 즉시 경고 1단계, 30초 무응답이면 경고 2단계, 1분 무응답이면 경고 3단계, 1분 30초에 오픈, 2분에 종료합니다. 캘린더 일정과 휴대폰 알람은 시연하지 않습니다.'),
+    h('p', null, '체험 모드입니다. 시작 즉시 경고 1단계, 30초 무응답이면 경고 2단계, 1분 무응답이면 경고 3단계, 1분 30초에 오픈, 2분에 종료합니다. 캘린더 일정과 휴대폰 알람은 체험하지 않습니다.'),
     h('div', { class: 'row' },
-      btn('시연 처음부터 다시', null, function () { startDemo(k.info, k.noticeId); }),
-      btn('시연 종료', null, function () { endKeeper(); go('home'); }))) : null;
+      btn('체험 처음부터 다시', null, function () { startDemo(k.info, k.noticeId); }),
+      btn('체험 종료', null, function () { endKeeper(); go('home'); }))) : null;
   return h('div', null,
     h('section', { class: 'sec stack' },
-      h('div', { class: 'keeper-head' }, k.demo ? h('span', { class: 'demo-flag' }, '시연 모드') : null, h('h1', { class: 'h1' }, '지킴이 화면')),
+      h('div', { class: 'keeper-head' }, k.demo ? h('span', { class: 'demo-flag' }, '체험 모드') : null, h('h1', { class: 'h1' }, '지킴이 화면')),
       h('p', { class: 'h3', style: 'margin:0' }, k.info.event),
-      h('p', { class: 'small muted' }, '예매 오픈 일시: ', k.demo ? '시연 기준 시작 1분 30초 뒤(' + fmtShort(k.openAt) + ')' : fmtDT(k.openAt)),
+      h('p', { class: 'small muted' }, '예매 오픈 일시: ', k.demo ? '체험 기준 시작 1분 30초 뒤(' + fmtShort(k.openAt) + ')' : fmtDT(k.openAt)),
       banner, cd, respondBox, after, unlockWrap,
       statusPanel(),
       demoBox),
     h('section', { class: 'sec stack' },
       h('p', { class: 'msg msg--warn small' }, '이 화면은 켜져 있는 동안에만 동작합니다. 탭을 다른 창으로 가려 두면 경고가 늦어질 수 있습니다. 절전이나 화면 꺼짐에 대비해 캘린더 일정과 휴대폰 알람을 함께 등록하세요.'),
-      !k.demo ? h('div', { class: 'row' }, btn('시연 모드', null, function () { startDemo(k.info, k.noticeId); }), btn('알림 등록 보기', null, function () { go('alerts'); })) : null));
+      !k.demo ? h('div', { class: 'row' }, btn('체험 모드', null, function () { startDemo(k.info, k.noticeId); }), btn('알림 등록 보기', null, function () { go('alerts'); })) : null));
 }
 
 /* ---------- 연습 엔진(S6, S9 공용) ---------- */
@@ -2696,7 +2789,7 @@ function recSummary(rec, msg) {
     h('p', { class: 'small muted' }, '연습 기록 1건을 저장했습니다.'));
 }
 function demoRunning() { return !!(keeper && keeper.demo && keeper.stage !== 'end'); }
-// preferDemo: 시연 진행 중 화면(워밍업)은 예시 값, 그 밖에는 실제 공지를 우선한다.
+// preferDemo: 체험 진행 중 화면(워밍업)은 예시 값, 그 밖에는 실제 공지를 우선한다.
 function practiceBase(preferDemo) {
   var info = preferDemo && demoRunning() ? keeper.info : S.notice ? noticeInfo(S.notice) : (keeper && !keeper.demo ? keeper.info : null);
   var grades = info && info.grades && info.grades.length ? info.grades : DEFAULT_GRADES;
@@ -2846,6 +2939,21 @@ function coachNextSection(t) {
   var c = targetAsCand(t);
   var area = h('div', { class: 'stack', id: 'coachNext' });
   var items = [btn('조건을 바꿔 다시 테스트', null, function () { go('practice'); })];
+  // 오픈 예정(저장한 예매 오픈 일시가 미래)이면 예매 10분 전 알림 걸기. 이미 걸었으면 표시와 바로 가기 버튼.
+  if (!t.ended && t.openAt && t.openAt > Date.now()) {
+    if (alertSetFor(c)) {
+      area.append(h('div', { class: 'msg msg--good small stack', id: 'alertDone' },
+        h('p', null, '알림을 걸었습니다(' + fmtDT(t.openAt) + ').'),
+        h('div', { class: 'row' }, btn('알림 등록 보기', 'btn--sm', function () { go('alerts'); }), btn('지킴이 화면 열기', 'btn--sm', openRealKeeper))));
+    } else {
+      var cb = t.source !== '수집 데이터' ? h('input', { type: 'checkbox', id: uid('cchk') }) : null;
+      var ab = alertButton(c, cb, 'btn--primary');
+      if (cb) cb.addEventListener('change', function () { ab.btn.disabled = !cb.checked; });
+      items.push(ab.btn);
+      area.append(h('p', { class: 'small' }, '예매 오픈: ' + fmtShort(t.openAt) + ', ' + remainShort(t.openAt)),
+        cb ? h('label', { class: 'check', for: cb.id }, cb, '출처 공지에서 예매 오픈 일시를 확인했습니다') : null, ab.box);
+    }
+  }
   if (t.ended) {
     if (S.goal && sameEvent(S.goal.event, waitGoalEvent(c, true))) area.append(h('p', { class: 'msg small' }, '공지 대기로 저장돼 있습니다.'));
     else {
@@ -3116,7 +3224,7 @@ function scrRecords() {
   var respTable = resps.length ? h('div', { class: 'tbl tbl--fit' }, h('table', null,
     h('thead', null, h('tr', null, ['시각', '행사', '응답', '응답 후 연습 화면 표시', '구분'].map(function (t) { return h('th', null, t); }))),
     h('tbody', null, resps.map(function (r) {
-      return h('tr', null, h('td', { class: 'mono' }, fmtStamp(r.at)), h('td', null, r.event || '-'), h('td', null, KIND_LABEL[r.kind] || '-'), h('td', { class: 'mono' }, r.warmupMs != null ? (r.warmupMs / 1000).toFixed(1) + '초' : '-'), h('td', null, r.demo ? '시연' : '실제'));
+      return h('tr', null, h('td', { class: 'mono' }, fmtStamp(r.at)), h('td', null, r.event || '-'), h('td', null, KIND_LABEL[r.kind] || '-'), h('td', { class: 'mono' }, r.warmupMs != null ? (r.warmupMs / 1000).toFixed(1) + '초' : '-'), h('td', null, r.demo ? '체험' : '실제'));
     })))) : h('p', { class: 'msg' }, '알림 응답 기록이 없습니다.');
   return h('div', null,
     h('section', { class: 'sec stack' },
