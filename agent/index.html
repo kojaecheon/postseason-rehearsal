@@ -66,6 +66,8 @@ main:focus{outline:none}
 .box--soft{background:var(--surface)}
 ul.plain{margin:0;padding-left:18px}
 ul.plain li{margin:2px 0}
+ol.plain{margin:0;padding-left:20px}
+ol.plain li{margin:2px 0}
 
 /* 버튼 */
 .btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:#fff;color:#000;font-weight:500;line-height:1.25;text-align:center;cursor:pointer;text-decoration:none;max-width:100%}
@@ -671,14 +673,48 @@ function matchBrace(s, i) {
 function extractJSON(s) {
   if (typeof s !== 'string' || !s.trim()) return { errs: [['응답', '붙여 넣은 글이 없습니다']] };
   s = s.slice(0, 60000);
-  var tries = 0, sawBrace = false;
-  for (var i = s.indexOf('{'); i !== -1 && tries < 30; i = s.indexOf('{', i + 1)) {
-    tries++; sawBrace = true;
+  var first = s.indexOf('{'), tries = 0;
+  if (first === -1) return { errs: [['응답', 'JSON 객체를 찾지 못했습니다']] };
+  for (var i = first; i !== -1 && tries < 30; i = s.indexOf('{', i + 1)) {
+    tries++;
     var end = matchBrace(s, i);
-    if (end < 0) continue;
-    try { return { obj: JSON.parse(s.slice(i, end + 1)) }; } catch (e) { /* 다음 후보 */ }
+    if (end >= 0) { try { return { obj: JSON.parse(s.slice(i, end + 1)) }; } catch (e) { /* 다음 후보 */ } }
+    if (i === first) {
+      // 가장 바깥 객체를 그대로 읽지 못했으면 문자열 안의 따옴표 표기를 보정해 한 번 더 읽습니다.
+      // 안쪽 객체를 찾기 전에 시도합니다. 순서를 바꾸면 후보 하나만 든 안쪽 객체를 응답 전체로 읽습니다. 읽은 값은 같은 형식·범위 검사를 거칩니다.
+      var last = s.lastIndexOf('}');
+      if (last > first) {
+        try {
+          var fixed = JSON.parse(repairQuotes(s.slice(first, last + 1)));
+          if (isPlain(fixed)) return { obj: fixed, repaired: true };
+        } catch (e2) { /* 보정해도 읽지 못했습니다 */ }
+      }
+    }
   }
-  return { errs: [['응답', sawBrace ? 'JSON 문법 오류로 해석하지 못했습니다' : 'JSON 객체를 찾지 못했습니다']] };
+  return { errs: [['응답', 'JSON 문법 오류로 해석하지 못했습니다. Helpy Chat 답변 아래의 「복사」 버튼으로 복사해 다시 붙여 넣어 주세요']] };
+}
+// Helpy Chat 화면에 보이는 답을 끌어서 복사하면 문자열 안의 따옴표 이스케이프(\")가 빠져 JSON 문법이 깨집니다.
+// 문자열 안의 " 는 뒤따르는 첫 글자가 , } ] : 이거나 글의 끝일 때만 닫는 따옴표로 보고, 그 밖의 " 는 \" 로 바꿉니다. 문자열 안의 줄바꿈과 탭도 이스케이프합니다.
+function repairQuotes(s) {
+  var out = '', inStr = false;
+  for (var i = 0; i < s.length; i++) {
+    var c = s[i];
+    if (!inStr) { if (c === '"') inStr = true; out += c; continue; }
+    if (c === '\\') { out += c + (i + 1 < s.length ? s[++i] : ''); continue; }
+    if (c === '\n') { out += '\\n'; continue; }
+    if (c === '\r') continue;
+    if (c === '\t') { out += '\\t'; continue; }
+    if (c === '"') {
+      var j = i + 1;
+      while (j < s.length && (s[j] === ' ' || s[j] === '\n' || s[j] === '\r' || s[j] === '\t')) j++;
+      var nx = j < s.length ? s[j] : '';
+      if (nx === '' || nx === ',' || nx === '}' || nx === ']' || nx === ':') { inStr = false; out += c; }
+      else out += '\\"';
+      continue;
+    }
+    out += c;
+  }
+  return out;
 }
 function strOrNull(v, n, F, errs) {
   if (v == null) return null;
@@ -803,17 +839,22 @@ function aiPanel(o) {
   var promptTa = h('textarea', { class: 'code any', rows: 8, readOnly: true, id: uid('prompt') });
   var noteEl = h('p', { class: 'msg small' });
   var copyMsg = h('p', { class: 'muted small', 'aria-live': 'polite' });
-  var respTa = h('textarea', { class: 'code', rows: 6, id: uid('resp'), placeholder: 'Helpy Chat 이 답한 JSON 을 붙여 넣으세요' });
+  var respTa = h('textarea', { class: 'code', rows: 6, id: uid('resp'), placeholder: 'Helpy Chat 답변 아래의 「복사」 버튼으로 복사한 답을 붙여 넣으세요' });
   var errBox = h('div', { class: 'msg msg--bad small', role: 'alert', hidden: true });
-  var fbBtn = btn(o.fallbackLabel, null, function () { o.onFallback(); });
+  var repairMsg = h('p', { class: 'msg small', 'aria-live': 'polite', hidden: true }, '응답의 따옴표 표기를 보정해 읽었습니다. 적용된 값이 맞는지 확인하세요.');
+  var fbBtn = btn(o.fallbackLabel, null, function () { repairMsg.hidden = true; o.onFallback(); });
   var helpyPane = h('div', { class: 'stack', role: 'tabpanel' },
-    h('p', { class: 'small muted' }, '요청문을 복사해 Helpy Chat 에 붙여 넣고, 받은 응답을 아래 입력란에 붙여 넣어 적용합니다.'),
+    h('ol', { class: 'plain small muted' },
+      h('li', null, '「요청문 복사」를 누릅니다.'),
+      h('li', null, '엘리스 LXP 왼쪽 위 목록에서 「AI Helpy Chat」을 열고 입력창에 붙여 넣어 보냅니다.'),
+      h('li', null, '답변 아래의 「복사」 버튼으로 답을 복사합니다. 화면의 글자를 끌어서 복사하면 따옴표 표기가 빠집니다.'),
+      h('li', null, '아래 「AI 응답 붙여넣기」에 붙여 넣고 「응답 적용」을 누릅니다.')),
     noteEl,
     field('요청문', promptTa),
     h('div', { class: 'row' }, btn('요청문 복사', null, copyPrompt), copyMsg),
     field('AI 응답 붙여넣기', respTa),
     h('div', { class: 'row' }, btn('응답 적용', 'btn--primary', applyResp), fbBtn),
-    errBox);
+    errBox, repairMsg);
   var exPane = h('div', { class: 'stack', role: 'tabpanel', hidden: true });
   function setTab(t) {
     tab = t;
@@ -837,18 +878,21 @@ function aiPanel(o) {
     } catch (e) { fallback(); }
   }
   function showErrs(errs) {
-    errBox.replaceChildren(
+    // replaceChildren 은 null 을 글자 「null」로 넣으므로 표시할 요소만 모아 넘깁니다.
+    var kids = [
       h('p', null, '형식 검사를 통과하지 못했습니다. 요청문을 다시 보내 주세요.'),
-      h('ul', { class: 'plain' }, errs.slice(0, 12).map(function (e) { return h('li', null, e[0] + ': ' + e[1]); })),
-      fails >= 2 ? h('p', null, '두 번째 실패입니다. ' + o.fallbackLabel + ' 버튼으로 진행하세요.') : null);
+      h('ul', { class: 'plain' }, errs.slice(0, 12).map(function (e) { return h('li', null, e[0] + ': ' + e[1]); }))];
+    if (fails >= 2) kids.push(h('p', null, '두 번째 실패입니다. ' + o.fallbackLabel + ' 버튼으로 진행하세요.'));
+    errBox.replaceChildren.apply(errBox, kids);
     errBox.hidden = false;
     if (fails >= 2) fbBtn.classList.add('btn--primary', 'btn--emph');
   }
   function applyResp() {
     var ex = extractJSON(respTa.value);
     var r = ex.errs ? ex : o.validate(ex.obj);
-    if (r.errs) { fails++; showErrs(r.errs); return; }
+    if (r.errs) { fails++; repairMsg.hidden = true; showErrs(r.errs); return; }
     errBox.hidden = true;
+    repairMsg.hidden = !ex.repaired;
     o.onApply(r.value, 'AI 응답');
   }
   function renderExample() {
@@ -867,6 +911,7 @@ function aiPanel(o) {
       h('div', { class: 'row' }, btn('예시 응답 적용', 'btn--primary', function () {
         var r = o.validate(ex);
         if (r.errs) { exPane.appendChild(h('p', { class: 'msg msg--bad' }, '예시 응답이 형식 검사를 통과하지 못했습니다.')); return; }
+        repairMsg.hidden = true; // 예시 응답을 적용하면 이전 AI 응답의 보정 안내를 숨깁니다.
         o.onApply(r.value, label);
       })));
   }
