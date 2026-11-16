@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rehearsal Agent</title>
+<title>티켓 비서</title>
 <link rel="icon" href="data:,">
 <style>
 :root{
@@ -206,7 +206,7 @@ ol.srcs{margin:0;padding-left:20px;display:grid;gap:10px;overflow-wrap:anywhere}
 <header class="top">
   <div class="top__in">
     <div class="top__row">
-      <a class="top__name" href="#home">Rehearsal Agent</a>
+      <a class="top__name" href="#home">티켓 비서</a>
       <span class="tag">연습용</span>
       <a class="top__home" href="#home">홈</a>
     </div>
@@ -1000,7 +1000,7 @@ function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch
 function enableAlerts(done) {
   unlockAudio();
   requestWake();
-  var finish = function () { setTimeout(function () { beepPair(0.3); notify('시험 알림', 'Rehearsal Agent 시험 알림입니다. 이 알림이 보이면 브라우저 알림이 동작합니다.'); if (done) done(); }, 200); };
+  var finish = function () { setTimeout(function () { beepPair(0.3); notify('시험 알림', '티켓 비서 시험 알림입니다. 이 알림이 보이면 브라우저 알림이 동작합니다.'); if (done) done(); }, 200); };
   if (notifState() === 'default') {
     var called = false;
     var once = function () { if (!called) { called = true; finish(); } };
@@ -1163,8 +1163,8 @@ function scrBroken() {
     confirmBox));
 }
 function updateTitle() {
-  var base = (route() === 'practice' && S.target ? '예매 테스트 조건 확인' : TITLES[route()]) + ' | Rehearsal Agent';
-  if (keeperAlerting()) document.title = '[경고] ' + STAGE_NAME[keeper.stage] + ' 예매 응답 필요 | Rehearsal Agent';
+  var base = (route() === 'practice' && S.target ? '예매 테스트 조건 확인' : TITLES[route()]) + ' | 티켓 비서';
+  if (keeperAlerting()) document.title = '[경고] ' + STAGE_NAME[keeper.stage] + ' 예매 응답 필요 | 티켓 비서';
   else document.title = base;
 }
 // 띠 요소는 한 번만 만들고 글자와 상태 속성만 갱신한다(초점 유지).
@@ -2176,9 +2176,9 @@ function alertTimes(openAt) {
       { at: openAt - 600000, name: '10분 전', tail: '예매 10분 전' }
     ],
     alarms: [
-      { at: openAt - 600000, name: '[리허설] 10분 전 지킴이 화면 응답' },
-      { at: openAt - 300000, name: '[리허설] 5분 전 준비 점검' },
-      { at: openAt - 60000, name: '[리허설] 1분 전 새로고침 금지' }
+      { at: openAt - 600000, name: '[티켓 비서] 10분 전 지킴이 화면 응답' },
+      { at: openAt - 300000, name: '[티켓 비서] 5분 전 준비 점검' },
+      { at: openAt - 60000, name: '[티켓 비서] 1분 전 새로고침 금지' }
     ],
     keeper: [
       { at: openAt - 600000, name: '경고 1단계(10분 전)' },
@@ -2206,7 +2206,7 @@ function icsFold(line) {
   out.push(cur);
   return out.join('\r\n');
 }
-function eventTitle(n, tail) { return '[리허설] ' + wellFormed(n.event || '예매') + ' ' + tail; }
+function eventTitle(n, tail) { return '[티켓 비서] ' + wellFormed(n.event || '예매') + ' ' + tail; }
 // ev: {start, end, summary, desc, rrule}
 function icsDoc(evs) {
   var now = utcStamp(Date.now()), seed = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -2248,7 +2248,7 @@ function downloadIcs(n) { saveIcs(buildIcs(n, S.plan), 'rehearsal-alerts.ics'); 
 function downloadGoalIcs(event) {
   var d = new Date(); d.setHours(9, 0, 0, 0);
   if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-  var title = '[리허설] ' + wellFormed(event || '행사') + ' 예매 공지 확인';
+  var title = '[티켓 비서] ' + wellFormed(event || '행사') + ' 예매 공지 확인';
   saveIcs(icsDoc([{ start: d.getTime(), end: d.getTime() + 600000, rrule: 'FREQ=DAILY;COUNT=14', summary: title, desc: '예매 일정이 공지됐는지 확인하세요. 공지되면 Rehearsal Agent 에서 예매 일정 찾기를 다시 진행합니다.' }]), 'rehearsal-goal-check.ics');
 }
 function gcalUrl(n, c) {
