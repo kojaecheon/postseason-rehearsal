@@ -1271,12 +1271,6 @@ function scrHome() {
       h('h1', { class: 'h1' }, '무엇을 예매하시나요?'),
       h('p', { class: 'lead' }, '분야를 고르면 예매 정보를 찾아 보여 주고, 예매 테스트와 오픈 알림 준비로 이어집니다.'),
       h('div', { class: 'cats', style: 'margin-top:12px' }, cats)),
-    h('section', { class: 'sec' },
-      h('p', { class: 'small muted' }, '예매 공지(예매처가 올린 예매 일정 안내 글)를 이미 가지고 있으면 공지를 등록합니다. 오픈 10분 전부터 지킴이 화면이 알리고, 같은 조건으로 워밍업 연습을 진행하고, 연습 기록을 분석합니다.'),
-      h('div', { class: 'grid3', style: 'margin-top:8px' },
-        btn('공지 등록', null, function () { flowDemo = false; if (draft.fromGoalCard || draft.fromGoal) resetDraft(false); go('notice'); }),
-        btn('바로 연습', null, function () { go('practice'); }),
-        btn('내 기록', null, function () { go('records'); }))),
     goalCard,
     h('section', { class: 'sec' },
       h('h2', { class: 'h2' }, '시연'),
@@ -2963,7 +2957,9 @@ function scrCoach() {
       h('h3', { class: 'h3' }, '최근 3회 추이'),
       h('div', { class: 'stack' }, trend)),
     h('section', { class: 'sec stack' }, panel.el, resultBox),
-    t ? coachNextSection(t) : null);
+    t ? coachNextSection(t) : null,
+    // 홈의 바로가기 영역을 없애면서 「내 기록」으로 가는 길을 여기에 둡니다.
+    h('section', { class: 'sec' }, h('div', { class: 'row' }, btn('내 기록', null, function () { go('records'); }))));
 }
 
 /* ---------- S9 예매 테스트 조건 확인(target 이 있을 때) ---------- */
