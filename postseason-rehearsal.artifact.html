@@ -381,11 +381,11 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
 <div class="ps" id="app">
 <header class="top" id="topBar">
   <div class="top__in">
-    <strong class="top__name">포스트시즌 예매 리허설</strong>
+    <strong class="top__name" id="topName">포스트시즌 예매 리허설</strong>
     <span class="top__chip">연습용 · 가상 예매 사이트 · 실제 결제 없음</span>
     <div class="top__act">
       <button type="button" class="btn btn--primary" id="topStart">연습 시작</button>
-      <button type="button" class="btn" id="topSeats">좌석 선택부터</button>
+      <button type="button" class="btn" id="topReset">초기화</button>
     </div>
   </div>
 </header>
@@ -417,16 +417,16 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
     <div class="prod">
       <canvas class="prod__poster" id="posterCanvas" width="380" height="504" role="img" aria-label="연습용 포스터: REHEARSAL, POST SEASON, 2026 · KBO 포스트시즌"></canvas>
       <div class="prod__head">
-        <p class="prod__kicker">야구 · 연습 전용 상품</p>
+        <p class="prod__kicker" id="homeKicker">야구 · 연습 전용 상품</p>
         <h2 class="prod__title" id="homeTitle">[연습] 2026 KBO 포스트시즌 한국시리즈 1차전</h2>
         <dl class="facts">
           <div><dt>장소</dt><dd id="homeVenue">잠실야구장</dd></div>
-          <div><dt>경기일</dt><dd id="homeDate">2026.10.31 (토) 14:00</dd></div>
+          <div><dt id="homeDateLabel">경기일</dt><dd id="homeDate">2026.10.31 (토) 14:00</dd></div>
         </dl>
       </div>
       <dl class="facts prod__meta">
         <div><dt>예매 오픈</dt><dd id="homeOpen">연습 시작을 누르면 카운트다운이 시작돼요</dd></div>
-        <div><dt>관람 등급</dt><dd>전체 관람가 · 인당 최대 4매</dd></div>
+        <div><dt id="homeGradeLabel">관람 등급</dt><dd id="homeGrade">전체 관람가 · 인당 최대 4매</dd></div>
       </dl>
     </div>
     <div class="buy">
@@ -502,7 +502,7 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
       <h2 class="block-title" id="blockTitle">-</h2>
       <p class="block-sub" id="blockSub">-</p>
       <p class="msg" id="blockWarn" data-tone="warn" hidden></p>
-      <div class="ground" aria-hidden="true">그라운드 방향</div>
+      <div class="ground" id="groundLabel" aria-hidden="true">그라운드 방향</div>
       <div class="sgrid" id="seatGrid" role="group" aria-label="좌석 배치도: 10열, 열마다 14번까지"></div>
       <ul class="legend-list" aria-hidden="true">
         <li><i></i>선택 가능</li><li><i class="lg-sold"></i>판매 완료</li><li><i class="lg-mine"></i>내 선택</li>
@@ -615,7 +615,7 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
     <button type="button" class="panel__toggle" id="panelToggle" aria-expanded="true" aria-controls="panelBody">연습 설정 접기</button>
     <div class="panel__body" id="panelBody">
   <h2 class="panel__title" id="panelTitle">연습 설정</h2>
-  <p class="panel__lead">바꾼 값은 다음 연습부터 적용돼요. 희망 매수와 결제 실패 확률은 진행 중에도 바로 반영돼요.</p>
+  <p class="panel__lead">바꾼 값은 다음 연습부터 적용돼요. 희망 매수는 진행 중에도 바로 반영돼요.</p>
   <section class="opt">
     <h3 class="opt__title" id="optPreset">시나리오 프리셋</h3>
     <div class="seg" id="segPreset" role="group" aria-labelledby="optPreset"></div>
@@ -629,11 +629,9 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
   <section class="opt">
     <h3 class="opt__title" id="optOpen">오픈 연습</h3>
     <div class="seg" id="segOpen" role="group" aria-labelledby="optOpen" style="--cols:3"></div>
-    <div style="margin-top:10px">
+    <div id="openAtWrap" style="margin-top:10px" hidden>
       <div class="field"><label for="openAtInput">지정 오픈 시각</label><input class="input" id="openAtInput" type="time" step="1" value="18:00:00"></div>
-      <div class="field"><label for="offsetInput">서버 - PC 차이 (초)</label><input class="input" id="offsetInput" type="number" step="0.1" value="0"></div>
     </div>
-    <p class="opt__help">서버시간 확인 사이트에서 예매처 서버가 내 PC보다 몇 초 빠른지 보고, 빠르면 +, 느리면 - 값으로 적어 주세요. 서버시간은 PC 시간에 이 차이를 더한 값이에요.</p>
     <div class="start-row">
       <button type="button" class="btn btn--dark" id="openStart">시작</button>
       <p class="pc-clock">PC 시계<time id="pcClock">--:--:--</time></p>
@@ -665,10 +663,6 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
   <section class="opt">
     <h3 class="opt__title" id="optLimit">좌석 선택·결제 제한시간</h3>
     <div class="seg" id="segLimit" role="group" aria-labelledby="optLimit" style="--cols:3"></div>
-  </section>
-  <section class="opt">
-    <h3 class="opt__title" id="optFail">결제 실패 확률</h3>
-    <div class="seg" id="segFail" role="group" aria-labelledby="optFail" style="--cols:3"></div>
   </section>
   <section class="opt">
     <h3 class="opt__title" id="optJudge">판정 기준 안내</h3>
@@ -736,7 +730,6 @@ const LIMITS = [
 const SPEEDS = [{ value: 1, label: '실제 속도', sub: '초당 400명 입장' }, { value: 10, label: '10배 빠르게', sub: '대기만 빨라져요' }];
 const CROWD = [{ value: true, label: '켜기' }, { value: false, label: '끄기' }];
 const QTYS = [1, 2, 3, 4].map(n => ({ value: n, label: n + '매' }));
-const FAILS = [{ value: 0, label: '0%' }, { value: 0.3, label: '30%' }, { value: 1, label: '100%' }];
 const PRESETS = [
   { id: 'quick', label: '빠른 리허설', note: '5초 카운트다운 · 접속자 몰림 켬 · 대기 10배 속도 · 제한 3분 · 결제 실패 0% · 규모 18만', values: { openMode: 's5', crowd: true, speed: 10, limit: 180, failRate: 0, scale: 180000 } },
   { id: 'real', label: '실전 그대로', note: '대기 실제 속도 · 제한 10분 · 그 밖의 값은 빠른 리허설과 같아요', values: { openMode: 's5', crowd: true, speed: 1, limit: 600, failRate: 0, scale: 180000 } },
@@ -829,8 +822,8 @@ const timers = (function () {
 })();
 
 /* 4. 설정 */
-const settings = { openMode: 's5', openAt: '18:00:00', offset: 0, stadium: 'jamsil', scale: 180000, crowd: true, qty: 2, speed: 10, limit: 180, failRate: 0 };
-const serverNow = () => Date.now() + settings.offset * 1000;
+const settings = { openMode: 's5', openAt: '18:00:00', stadium: 'jamsil', scale: 180000, crowd: true, qty: 2, speed: 1, limit: 600, failRate: 0 };
+const serverNow = () => Date.now();
 const currentStadium = () => STADIUMS.find(s => s.id === settings.stadium) || STADIUMS[0];
 const limitText = sec => (LIMITS.find(l => l.value === sec) || LIMITS[1]).text;
 
@@ -1129,6 +1122,15 @@ function startPractice() {
   render();
   revealSite();
 }
+// 진행 중인 연습을 멈추고 첫 화면으로 돌아갑니다. 연습 설정은 유지하고, 멈춘 연습은 기록하지 않습니다.
+function resetPractice() {
+  const active = runActive();
+  resetRun();
+  if (active) addLog('연습 초기화');
+  setResult('연습을 초기화했어요. 「연습 시작」을 누르면 다시 시작해요.', '');
+  render();
+  revealSite();
+}
 function tickCountdown() {
   if (run.stage !== 'countdown') return false;
   const remain = run.openPerf - performance.now();
@@ -1205,7 +1207,7 @@ function enterQueue(rank) {
   const need = Math.min(rank - 1, seatLimits(run.total).all);
   const realSec = need / (MODEL.admitPerSec * settings.speed);
   run.qSlow = realSec > 0 && realSec < 2.4 ? realSec / 2.4 : 1;
-  D.qProduct.textContent = '[연습] ' + run.venue + ' · 포스트시즌 대비';
+  D.qProduct.textContent = '[연습] ' + run.venue + ' · ' + THEME.suffix;
   timers.interval('queue', tickQueue, 100);
   render();
   renderQueue();
@@ -1645,7 +1647,7 @@ function enterPay() { run.stage = 'pay'; run.paying = false; D.payMsg.textConten
 function renderPay() {
   D.cardFields.hidden = payMethod() !== 'card';
   fillDl(D.paySum, [
-    ['경기', GAME.title + ' · ' + run.venue],
+    [THEME.itemLabel, GAME.title + ' · ' + run.venue],
     ['좌석', run.picks.map(seatName).join(', ')],
     ['결제 수단', methodText()],
     ['결제 금액', won(totals().total), 'is-total']
@@ -1751,7 +1753,7 @@ function renderDone() {
       ['접속 오류', run.connectFails + '회']
     ]],
     ['대기열', [
-      ['구장', run.venue],
+      [THEME.venueLabel, run.venue],
       ['나의 대기순서', run.rankFirst ? comma(run.rankFirst) + '번' + assumed + (run.refreshed ? ' → 새로고침 뒤 ' + comma(run.rankNow) + '번' : '') : '-'],
       ['전체 대비', run.rankFirst ? '전체 ' + comma(run.N) + '명 중 상위 ' + topPct(run.rankFirst, run.N) + '%' : '-'],
       ['입장 시 남은 좌석', run.entryLeft != null ? '약 ' + approx(run.entryLeft) + '석' : '-']
@@ -1835,7 +1837,7 @@ function saveAttempt(ok, key) {
   const st = STADIUMS.find(x => x.name === run.venue);
   const a = {
     id: 'A' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), at: Date.now(), source: AGENT ? 'agent' : 'site',
-    title: GAME.title.replace(/^\[연습\]\s*/, ''), stadium: st ? st.id : null, scale: run.N, qty: settings.qty, shortcut: run.shortcut || null,
+    title: GAME.title.replace(/^\[연습\]\s*/, ''), stadium: st && THEME === THEMES.baseball ? st.id : null, scale: run.N, qty: settings.qty, shortcut: run.shortcut || null,
     reactMs: run.reactMs, rankFirst: run.rankFirst || null,
     captchaMs: run.capEnd ? ms(run.capEnd - run.capStart) : null, captchaWrong: run.capStart ? run.capWrong : null,
     seatMs: run.seatEnd ? ms(run.seatEnd - run.seatStart) : null, collisions: run.seatStart ? run.collisions : null,
@@ -1857,20 +1859,73 @@ const AGENT = (function () {
   let p;
   try { p = new URLSearchParams(location.search); } catch (e) { return null; }
   if (p.get('from') !== 'agent') return null;
-  const raw = p.get('title') || '';
-  const title = raw.length > 2000 ? '' : Array.from(raw.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, 120).join('');
+  const clean = (raw, n) => raw.length > 2000 ? '' : Array.from(raw.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, n).join('');
+  const title = clean(p.get('title') || '', 120), venue = clean(p.get('venue') || '', 60);
+  const limit = /^([1-9]|1[0-9]|20)$/.test(p.get('limit') || '') ? +p.get('limit') : null;
+  const genre = ['sports', 'basketball', 'football', 'musical', 'concert', 'show'].indexOf(p.get('genre')) >= 0 ? p.get('genre') : 'baseball';
   const stadium = STADIUMS.some(x => x.id === p.get('stadium')) ? p.get('stadium') : null;
   const scale = SCALES.find(x => String(x.value) === p.get('scale'));
   const qty = /^[1-4]$/.test(p.get('qty') || '') ? +p.get('qty') : null;
   const jump = ['captcha', 'seats'].indexOf(p.get('jump')) >= 0 ? p.get('jump') : null;
-  return { title: title || null, stadium, scale: scale ? scale.value : null, qty, jump };
+  return { title: title || null, stadium, scale: scale ? scale.value : null, qty, jump, genre, limit, venue: venue || null };
 })();
+
+/* 18-3. 예매 분야별 화면: 포스터, 좌석 구역, 문구를 분야에 맞춥니다. 주소 인자가 없으면 야구입니다. */
+const THEME_BASE = {
+  site: '포스트시즌 예매 리허설', kicker: '야구', words: ['POST', 'SEASON'], badge: '2026 · KBO 포스트시즌', foot: 'GAME 1 · 2026.10.31 14:00',
+  art: 'diamond', accent: '#124eeb', soft: ['#dbe5ff', '#eef3ff'], venueLabel: '구장', dateLabel: '경기일', itemLabel: '경기', front: '그라운드 방향',
+  suffix: '포스트시즌 대비', gradeLabel: '관람 등급', grade: '전체 관람가 · 인당 최대 4매', venueName: '잠실야구장', zones: null
+};
+const THEME_SPORT = Object.assign({}, THEME_BASE, { site: '티켓 예매 리허설', venueLabel: '경기장', suffix: '예매 대비', gradeLabel: '구매 안내', grade: '인당 최대 4매', venueName: '연습용 경기장', foot: 'GAME DAY · PRACTICE ONLY' });
+const THEME_SHOW = Object.assign({}, THEME_SPORT, { venueLabel: '공연장', dateLabel: '공연일', itemLabel: '공연', front: '무대 방향', venueName: '연습용 공연장', foot: 'SHOW TIME · PRACTICE ONLY' });
+const zoneList = list => list.map((z, i) => ({ code: i + 1, name: z[0], share: z[1], pop: z[2], price: z[3] }));
+const THEMES = {
+  baseball: THEME_BASE,
+  sports: Object.assign({}, THEME_SPORT, { kicker: '스포츠', words: ['GAME', 'DAY'], badge: '스포츠 · 연습 경기', art: 'court', accent: '#0f6e8c', soft: ['#d6f0f7', '#eef9fc'], front: '경기장 방향',
+    zones: zoneList([['1층 중앙석', 0.22, 1.5, 60000], ['1층 측면석', 0.28, 1.15, 45000], ['2층 중앙석', 0.26, 0.9, 30000], ['2층 측면석', 0.24, 0.7, 20000]]) }),
+  basketball: Object.assign({}, THEME_SPORT, { kicker: '농구', words: ['BASKET', 'BALL'], badge: '2026-27 · KBL', art: 'court', accent: '#c2560c', soft: ['#ffe6d5', '#fff3ea'], front: '코트 방향',
+    zones: zoneList([['코트사이드석', 0.06, 1.6, 120000], ['1층 중앙석', 0.2, 1.3, 60000], ['1층 측면석', 0.24, 1.1, 45000], ['2층 중앙석', 0.26, 0.9, 30000], ['2층 측면석', 0.24, 0.7, 20000]]) }),
+  football: Object.assign({}, THEME_SPORT, { kicker: '축구', words: ['FOOT', 'BALL'], badge: '2026 · K리그', art: 'pitch', accent: '#0f7a43', soft: ['#d9f5e5', '#effbf4'],
+    zones: zoneList([['프리미엄석', 0.06, 1.6, 60000], ['중앙 지정석', 0.24, 1.3, 35000], ['측면 지정석', 0.3, 1.05, 25000], ['응원석', 0.2, 0.9, 18000], ['원정석', 0.2, 0.6, 18000]]) }),
+  musical: Object.assign({}, THEME_SHOW, { kicker: '뮤지컬', words: ['THE', 'MUSICAL'], badge: '뮤지컬 · 연습 회차', art: 'curtain', accent: '#9b1c4f', soft: ['#fbdbe8', '#fdf0f5'],
+    zones: zoneList([['VIP석', 0.18, 1.6, 190000], ['R석', 0.3, 1.3, 160000], ['S석', 0.27, 1, 130000], ['A석', 0.25, 0.7, 90000]]) }),
+  concert: Object.assign({}, THEME_SHOW, { kicker: '콘서트', words: ['LIVE', 'CONCERT'], badge: '콘서트 · 연습 회차', art: 'beams', accent: '#5b2bd9', soft: ['#e6dcff', '#f4f0ff'], foot: 'LIVE · PRACTICE ONLY',
+    zones: zoneList([['스탠딩 A구역', 0.14, 1.6, 154000], ['스탠딩 B구역', 0.16, 1.4, 154000], ['1층 지정석', 0.26, 1.15, 154000], ['2층 지정석', 0.24, 0.9, 132000], ['3층 지정석', 0.2, 0.7, 110000]]) }),
+  show: Object.assign({}, THEME_SHOW, { kicker: '공연', words: ['LIVE', 'SHOW'], badge: '공연 · 연습 회차', art: 'curtain', accent: '#0f6e8c', soft: ['#d6f0f7', '#eef9fc'],
+    zones: zoneList([['R석', 0.35, 1.4, 110000], ['S석', 0.35, 1, 88000], ['A석', 0.3, 0.7, 66000]]) })
+};
+const THEME = THEMES[AGENT ? AGENT.genre : 'baseball'];
+const SCALE_NAMES = { 20000: '소규모', 80000: '인기', 125000: '매우 인기', 180000: '대형', 250000: '초대형', 500000: '최대 규모' };
+function applyTheme() {
+  if (THEME === THEMES.baseball) return;
+  ZONES.splice(0, ZONES.length, ...THEME.zones);
+  // 회차를 합친 연습용 좌석 수입니다. 대기열 난이도를 다른 분야와 맞춥니다.
+  STADIUMS.splice(0, STADIUMS.length, { id: 'venue', name: (AGENT && AGENT.venue) || THEME.venueName, seats: 20000 });
+  settings.stadium = 'venue';
+  SCALES.forEach(x => { x.label = SCALE_NAMES[x.value] || x.label; });
+  PRESETS.forEach(x => { x.note = x.note.replace('한국시리즈급 ', ''); });
+  document.title = THEME.site;
+  D.topName.textContent = THEME.site;
+  D.homeKicker.textContent = THEME.kicker + ' · 연습 전용 상품';
+  D.homeDateLabel.textContent = THEME.dateLabel;
+  D.homeGradeLabel.textContent = THEME.gradeLabel;
+  D.homeGrade.textContent = AGENT && AGENT.limit ? '인당 최대 ' + AGENT.limit + '매' : THEME.grade;
+  D.groundLabel.textContent = THEME.front;
+  D.posterCanvas.setAttribute('aria-label', '연습용 포스터: ' + THEME.words.join(' ') + ', ' + THEME.badge);
+  D.segStadium.closest('section').hidden = true;
+}
 function applyAgent() {
   if (!AGENT) return;
   if (AGENT.title) { GAME.title = '[연습] ' + AGENT.title; D.homeTitle.textContent = GAME.title; }
   if (D.homeDate) D.homeDate.textContent = '연습용 가상 일정';
-  if (AGENT.stadium) settings.stadium = AGENT.stadium;
-  if (AGENT.scale) settings.scale = AGENT.scale;
+  if (AGENT.stadium && THEME === THEMES.baseball) settings.stadium = AGENT.stadium;
+  if (AGENT.scale) {
+    settings.scale = AGENT.scale;
+    // 티켓 비서에서 고른 예매의 규모로도 「실전 그대로」가 선택되게 합니다.
+    const real = PRESETS.find(x => x.id === 'real');
+    real.values.scale = AGENT.scale;
+    real.note = '대기 실제 속도 · 제한 10분 · 대기 규모는 티켓 비서에서 고른 예매 기준이에요';
+  }
   if (AGENT.qty) settings.qty = AGENT.qty;
   const bar = el('div', 'agentbar'), inner = el('div', 'agentbar__in');
   const back = el('a', 'agentbar__a', '티켓 비서로 돌아가기'); back.href = 'agent/#home';
@@ -1947,7 +2002,7 @@ function applyPreset(id) {
 function buildPanel() {
   const counting = () => run.stage === 'countdown';
   buildSeg(D.segPreset, PRESETS.map(p => ({ value: p.id, label: p.label })), { current: matchedPreset, locked: counting, pick: applyPreset });
-  buildSeg(D.segJump, JUMPS, { pick: startShortcut });
+  buildSeg(D.segJump, JUMPS, { current: () => run.shortcut || (AGENT && AGENT.jump) || 'queue', pick: startShortcut });
   buildSeg(D.segOpen, OPEN_MODES, { current: () => settings.openMode, locked: counting, pick: v => { settings.openMode = v; } });
   buildSeg(D.segStadium, STADIUMS.map(s => ({ value: s.id, label: s.name, sub: comma(s.seats) + '석' })), { current: () => settings.stadium, locked: runActive, pick: v => { settings.stadium = v; } });
   buildSeg(D.segScale, SCALES, { current: () => settings.scale, pick: v => { settings.scale = v; } });
@@ -1955,7 +2010,6 @@ function buildPanel() {
   buildSeg(D.segQty, QTYS, { current: () => settings.qty, pick: v => { settings.qty = v; if (run.stage === 'seats') { renderZones(); renderBlock(); } } });
   buildSeg(D.segSpeed, SPEEDS, { current: () => settings.speed, pick: v => { settings.speed = v; } });
   buildSeg(D.segLimit, LIMITS, { current: () => settings.limit, pick: v => { settings.limit = v; } });
-  buildSeg(D.segFail, FAILS, { current: () => settings.failRate, pick: v => { settings.failRate = v; } });
 }
 function renderJudge() {
   const st = currentStadium(), lim = seatLimits(st.seats), r100 = n => comma(Math.round(n / 100) * 100);
@@ -1970,12 +2024,14 @@ function renderJudge() {
   for (const it of items) { const li = el('li'); li.append(el('b', '', it[0]), document.createTextNode(it[1])); D.judgeList.appendChild(li); }
 }
 function refreshPanel() {
+  // 결제 실패는 프리셋으로만 켭니다. 프리셋에서 벗어나면 끕니다.
+  if (settings.failRate && !matchedPreset()) settings.failRate = 0;
   for (const g of segGroups) {
     const cur = g.current ? g.current() : undefined, lock = g.locked ? g.locked() : false;
     for (const x of g.btns) { if (g.current) x.b.setAttribute('aria-pressed', String(x.o.value === cur)); x.b.disabled = lock; }
   }
   const counting = run.stage === 'countdown';
-  D.openAtInput.disabled = counting; D.offsetInput.disabled = counting; D.openLock.hidden = !counting;
+  D.openAtInput.disabled = counting; D.openAtWrap.hidden = settings.openMode !== 'at'; D.openLock.hidden = !counting;
   D.stadiumLock.hidden = !runActive();
   const p = PRESETS.find(x => x.id === matchedPreset());
   D.presetNote.textContent = p ? p.note : '직접 바꾼 설정으로 연습 중이에요. 프리셋을 누르면 한 번에 바뀌어요.';
@@ -2005,44 +2061,73 @@ function roundRect(g, x, y, w, h, r) {
   g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r);
   g.closePath();
 }
+// 포스터 오른쪽 아래 그림: 분야별 경기장이나 무대를 선으로 그립니다.
+function drawPosterArt(g, W, H, tint) {
+  const cx = W * 0.68, cy = H * 0.69, line = (a, w) => { g.strokeStyle = tint(a); g.lineWidth = w || 1.25; };
+  g.save();
+  if (THEME.art === 'diamond') {
+    g.translate(cx, cy); g.rotate(Math.PI / 4);
+    line(0.22); g.strokeRect(-62, -62, 124, 124);
+    line(0.1); g.strokeRect(-112, -112, 224, 224);
+    g.fillStyle = tint(0.35);
+    [[-62, -62], [62, -62], [62, 62], [-62, 62]].forEach(p => g.fillRect(p[0] - 4, p[1] - 4, 8, 8));
+  } else if (THEME.art === 'court') {
+    g.translate(cx, cy); line(0.24); g.strokeRect(-100, -66, 200, 132);
+    g.beginPath(); g.moveTo(0, -66); g.lineTo(0, 66); g.stroke();
+    g.beginPath(); g.arc(0, 0, 24, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(-100, 0, 44, -Math.PI / 2, Math.PI / 2); g.stroke();
+    g.beginPath(); g.arc(100, 0, 44, Math.PI / 2, Math.PI * 1.5); g.stroke();
+  } else if (THEME.art === 'pitch') {
+    g.translate(cx, cy); line(0.24); g.strokeRect(-104, -68, 208, 136);
+    g.beginPath(); g.moveTo(0, -68); g.lineTo(0, 68); g.stroke();
+    g.beginPath(); g.arc(0, 0, 22, 0, Math.PI * 2); g.stroke();
+    g.strokeRect(-104, -34, 32, 68); g.strokeRect(72, -34, 32, 68);
+  } else if (THEME.art === 'curtain') {
+    g.translate(cx, H * 0.8); line(0.26);
+    [46, 78, 110].forEach((r, i) => { line(0.26 - i * 0.06); g.beginPath(); g.arc(0, 0, r, Math.PI, 0); g.stroke(); });
+    line(0.3, 2); g.beginPath(); g.moveTo(-124, 0); g.lineTo(124, 0); g.stroke();
+    g.fillStyle = tint(0.35); [-30, 0, 30].forEach(x => g.fillRect(x - 3, -12, 6, 12));
+  } else {
+    g.translate(cx, H * 0.52); line(0.16);
+    [-0.5, -0.25, 0, 0.25, 0.5].forEach(a => { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.sin(a) * 170, Math.cos(a) * 170); g.stroke(); });
+    g.fillStyle = tint(0.3);
+    [26, 48, 34, 60, 40, 22].forEach((h, i) => g.fillRect(-66 + i * 23, 150 - h, 13, h));
+  }
+  g.restore();
+}
 function drawPoster() {
+  const n = parseInt(THEME.accent.slice(1), 16), tint = a => 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
   const cv = D.posterCanvas, W = 380, H = 504, dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   const g = cv.getContext('2d'); if (!g) return;
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
   const bg = g.createLinearGradient(W, 0, 0, H);
-  bg.addColorStop(0, '#dbe5ff'); bg.addColorStop(0.5, '#eef3ff'); bg.addColorStop(1, '#ffffff');
+  bg.addColorStop(0, THEME.soft[0]); bg.addColorStop(0.5, THEME.soft[1]); bg.addColorStop(1, '#ffffff');
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  g.strokeStyle = 'rgba(18,78,235,0.07)'; g.lineWidth = 1; g.beginPath();
+  g.strokeStyle = tint(0.07); g.lineWidth = 1; g.beginPath();
   for (let x = 19.5; x < W; x += 19) { g.moveTo(x, 0); g.lineTo(x, H); }
   for (let y = 19.5; y < H; y += 19) { g.moveTo(0, y); g.lineTo(W, y); }
   g.stroke();
-  // 내야 다이아몬드 선
-  g.save(); g.translate(W * 0.68, H * 0.69); g.rotate(Math.PI / 4);
-  g.strokeStyle = 'rgba(18,78,235,0.22)'; g.lineWidth = 1.25; g.strokeRect(-62, -62, 124, 124);
-  g.strokeStyle = 'rgba(18,78,235,0.10)'; g.strokeRect(-112, -112, 224, 224);
-  g.fillStyle = 'rgba(18,78,235,0.35)';
-  [[-62, -62], [62, -62], [62, 62], [-62, 62]].forEach(p => g.fillRect(p[0] - 4, p[1] - 4, 8, 8));
-  g.restore();
+  drawPosterArt(g, W, H, tint);
   const sans = '"Inter","Noto Sans KR",sans-serif', mono = '"Geist Mono",ui-monospace,monospace';
   g.textBaseline = 'alphabetic';
-  g.fillStyle = '#124eeb'; g.font = '600 13px ' + mono;
+  g.fillStyle = THEME.accent; g.font = '600 13px ' + mono;
   spaced(g, 'REHEARSAL', 28, 54, 3.2);
   g.fillStyle = '#000000'; g.font = '600 96px ' + sans;
-  const widest = Math.max(g.measureText('POST').width, g.measureText('SEASON').width);
+  const widest = Math.max(g.measureText(THEME.words[0]).width, g.measureText(THEME.words[1]).width);
   const size = Math.min(96, Math.floor(96 * (W - 50) / widest));
   g.font = '600 ' + size + 'px ' + sans;
-  spaced(g, 'POST', 24, 86 + size * 0.95, -size * 0.035);
-  spaced(g, 'SEASON', 24, 86 + size * 1.9, -size * 0.035);
-  const label = '2026 · KBO 포스트시즌', py = 86 + size * 1.9 + 24;
+  spaced(g, THEME.words[0], 24, 86 + size * 0.95, -size * 0.035);
+  spaced(g, THEME.words[1], 24, 86 + size * 1.9, -size * 0.035);
+  const label = THEME.badge, py = 86 + size * 1.9 + 24;
   g.font = '600 15px "Noto Sans KR","Inter",sans-serif';
   const tw = g.measureText(label).width;
-  roundRect(g, 26, py, tw + 28, 34, 17); g.fillStyle = '#124eeb'; g.fill();
+  roundRect(g, 26, py, tw + 28, 34, 17); g.fillStyle = THEME.accent; g.fill();
   g.fillStyle = '#ffffff'; g.textBaseline = 'middle'; g.fillText(label, 40, py + 17.5);
   g.textBaseline = 'alphabetic';
   g.strokeStyle = 'rgba(0,0,0,0.12)'; g.beginPath(); g.moveTo(28, H - 68.5); g.lineTo(W - 28, H - 68.5); g.stroke();
-  g.fillStyle = '#3d3d3d'; g.font = '500 12px ' + mono; g.fillText('GAME 1 · 2026.10.31 14:00', 28, H - 46);
+  g.fillStyle = '#3d3d3d'; g.font = '500 12px ' + mono; g.fillText(THEME.foot, 28, H - 46);
   g.fillStyle = '#616161'; g.fillText('PRACTICE ONLY · NOT FOR SALE', 28, H - 28);
 }
 
@@ -2057,7 +2142,7 @@ function tickClock() {
 function syncTopH() { document.documentElement.style.setProperty('--top-h', D.topBar.offsetHeight + 'px'); }
 function bindEvents() {
   D.topStart.addEventListener('click', startPractice);
-  D.topSeats.addEventListener('click', () => startShortcut('seats'));
+  D.topReset.addEventListener('click', resetPractice);
   D.openStart.addEventListener('click', startPractice);
   D.navBook.addEventListener('click', () => { if (run.stage === 'done') run = blankRun(); view = 'book'; render(); });
   D.navHistory.addEventListener('click', () => { view = 'history'; pendingCancel = ''; render(); });
@@ -2115,11 +2200,6 @@ function bindEvents() {
     settings.openMode = 'at';
     refreshPanel();
   });
-  D.offsetInput.addEventListener('input', () => {
-    const v = parseFloat(D.offsetInput.value);
-    settings.offset = isFinite(v) ? clamp(v, -3600, 3600) : 0;
-    tickClock();
-  });
   // 완료 화면: 입력칸에 포커스가 없을 때 Enter 또는 R로 다시 연습
   document.addEventListener('keydown', e => {
     if (run.stage !== 'done' || view !== 'book' || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -2147,6 +2227,7 @@ function init() {
   // 글꼴 CSS는 print로 받아 두었다가 적용: 글꼴 서버가 느려도 화면과 스크립트가 먼저 뜬다
   const fontCss = $('fontCss');
   if (fontCss) fontCss.media = 'all';
+  applyTheme();
   buildPrice();
   buildZoneButtons();
   buildPanel();

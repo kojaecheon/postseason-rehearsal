@@ -91,6 +91,8 @@ ol.plain li{margin:2px 0}
 .badge--warn{color:var(--warn);background:var(--warn-bg);border-color:rgba(180,83,9,.35)}
 .badge--bad{color:var(--bad);background:var(--bad-bg);border-color:rgba(220,38,38,.35)}
 .badge--info{color:var(--primary);background:var(--blue-soft);border-color:var(--blue-line)}
+.badge--demo{color:#fff;background:var(--bad);border-color:var(--bad)}
+.btn:disabled .badge--demo{opacity:.55}
 .src{font-size:11.5px;font-weight:600;color:var(--primary);border:1px dashed var(--blue-line);border-radius:var(--r-sm);padding:0 6px;white-space:nowrap}
 .msg{overflow-wrap:anywhere;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface)}
 .msg--warn{border-color:rgba(180,83,9,.35);background:var(--warn-bg);color:#7c2d12}
@@ -179,6 +181,7 @@ dl.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .cat{appearance:none;text-align:left;border:1px solid var(--line-2);border-radius:var(--r-lg);background:#fff;padding:14px;min-height:84px;display:grid;gap:4px;align-content:start;cursor:pointer;color:#000;font:inherit}
 .cat strong{font-size:16px}
+.cat__head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
 .cat:hover{border-color:var(--primary);background:var(--blue-soft)}
 .chat{display:grid;gap:10px}
 .bubble{padding:10px 12px;border-radius:var(--r-lg);border:1px solid var(--line);overflow-wrap:anywhere;display:grid;gap:8px;min-width:0}
@@ -186,6 +189,16 @@ dl.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .bubble--svc{background:var(--surface)}
 .cand{border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:10px;display:grid;gap:4px;min-width:0}
 .cand--ended{background:var(--surface);color:var(--text-2)}
+.cand__open{font-weight:700;color:var(--primary)}
+.cand--link{cursor:pointer;transition:border-color .15s,background-color .15s,box-shadow .15s,transform .15s}
+.cand--link:active{background:var(--blue-soft);border-color:var(--primary)}
+.cand--link.cand--ended:active{background:var(--surface-2)}
+@media (hover:hover){
+  .cand--link:hover{border-color:var(--primary);background:var(--blue-soft);box-shadow:0 4px 12px rgba(18,78,235,.14);transform:translateY(-1px)}
+  .cand--link:hover .btn{background:var(--primary);border-color:var(--primary);color:#fff}
+  .cand--link.cand--ended:hover{background:var(--surface-2)}
+}
+@media (prefers-reduced-motion:reduce){.cand--link{transition:none}.cand--link:hover{transform:none}}
 .ended-group{border-top:1px dashed var(--line-2);padding-top:8px}
 .findbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 0 12px;margin-top:12px;z-index:20}
 .findbar__in{display:flex;gap:8px}
@@ -271,6 +284,10 @@ function btn(text, cls, fn, extra) {
   return h('button', p, text);
 }
 function badge(text, kind) { return h('span', { class: 'badge' + (kind ? ' badge--' + kind : '') }, text); }
+// 체험 흐름을 끝까지 이어 볼 수 있는 선택지 표시: 스포츠 예매, 프로야구, 2026 KBO 한국시리즈
+var DEMO_LABEL = '시연 가능', DEMO_CAT = 'sports', DEMO_CHOICE = '프로야구', DEMO_CAND = 'ks-demo';
+// 스포츠 예매 입력란에 보여 주는 시연 문장. 입력란을 비운 채 보내면 이 문장으로 찾습니다.
+var DEMO_QUERY = '2026 한국시리즈 예매를 테스트하고 싶어요', DEMO_HINT_SHORT = '2026 한국시리즈 예매 테스트하기', FIND_HINT = '찾는 예매를 입력해 주세요';
 function srcTag(text) { return h('span', { class: 'src', title: '값의 출처' }, '출처: ' + text); }
 function field(labelText, input, hint) {
   if (!input.id) input.id = uid('f');
@@ -491,12 +508,37 @@ function cleanTarget(t) {
     whereToCheck: Array.isArray(t.whereToCheck) ? t.whereToCheck.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
     pastOpen: typeof t.pastOpen === 'string' && t.pastOpen.trim() ? clip(wellFormed(t.pastOpen), 200) : null,
     sourceUrl: safeHttps(t.sourceUrl),
-    // 예매 10분 전 알림 걸기에 쓰는 값(예매 오픈 일시, 예매 페이지 주소). 구장은 venue 를 씁니다.
+    // 예매 10분 전 알림 설정에 쓰는 값(예매 오픈 일시, 예매 페이지 주소). 구장은 venue 를 씁니다.
     openAt: finNum(t.openAt) ? t.openAt : null,
     sellerUrl: safeHttps(t.sellerUrl)
   };
 }
 var S;
+// 즐겨찾기: 모아 둔 예매는 번호만, AI 검색 결과는 화면에 필요한 값만 저장합니다.
+function cleanFavorites(v) {
+  if (!Array.isArray(v)) return [];
+  var out = [];
+  v.slice(0, 20).forEach(function (f) {
+    if (!isPlain(f)) return;
+    if (typeof f.ref === 'string' && f.ref) { out.push({ ref: clip(f.ref, 40) }); return; }
+    if (typeof f.title !== 'string' || !f.title.trim()) return;
+    out.push({
+      title: clip(wellFormed(f.title), 100),
+      category: ['sports', 'musical', 'concert', 'etc'].indexOf(f.category) >= 0 ? f.category : 'etc',
+      status: ['upcoming', 'on_sale', 'not_announced', 'ended'].indexOf(f.status) >= 0 ? f.status : 'on_sale',
+      period: typeof f.period === 'string' ? clip(wellFormed(f.period), 100) : null,
+      endDate: validKey(f.endDate) ? f.endDate : null,
+      venue: typeof f.venue === 'string' ? clip(wellFormed(f.venue), 100) : null,
+      seller: typeof f.seller === 'string' ? clip(wellFormed(f.seller), 100) : null,
+      sellerUrl: safeHttps(f.sellerUrl), sourceUrl: safeHttps(f.sourceUrl),
+      openAt: finNum(f.openAt) ? f.openAt : null,
+      limit: Number.isInteger(f.limit) && f.limit >= 1 && f.limit <= 20 ? f.limit : null,
+      notes: typeof f.notes === 'string' ? clip(wellFormed(f.notes), 500) : null,
+      source: f.source === '예시 응답' ? '예시 응답' : 'AI 응답'
+    });
+  });
+  return out;
+}
 function loadAll() {
   S = {
     notice: cleanNotice(load('notice', null)),
@@ -507,13 +549,14 @@ function loadAll() {
     goal: cleanGoal(load('goal', null)),
     results: cleanResults(load('results', [])),
     target: cleanTarget(load('target', null)),
+    favorites: cleanFavorites(load('favorites', [])),
     // 연습 사이트에서 가져온 시도 번호(중복 가져오기 방지)
     imported: (function (v) { return Array.isArray(v) ? v.filter(function (x) { return typeof x === 'string' && x.length <= 40; }).slice(-200) : []; })(load('imported', []))
   };
 }
 function resetStorage() {
-  ['notice', 'plan', 'records', 'responses', 'practiceSetting', 'goal', 'results', 'target', 'imported'].forEach(function (k) { try { window.localStorage.removeItem(PREFIX + k); } catch (e) { /* 저장 불가 */ } });
-  S = { notice: null, plan: null, records: [], responses: [], practiceSetting: null, goal: null, results: [], target: null, imported: [] };
+  ['notice', 'plan', 'records', 'responses', 'practiceSetting', 'goal', 'results', 'target', 'favorites', 'imported'].forEach(function (k) { try { window.localStorage.removeItem(PREFIX + k); } catch (e) { /* 저장 불가 */ } });
+  S = { notice: null, plan: null, records: [], responses: [], practiceSetting: null, goal: null, results: [], target: null, favorites: [], imported: [] };
 }
 
 /* ---------- 상수 ---------- */
@@ -1121,7 +1164,7 @@ function openRealKeeper() {
 var ROUTES = ['home', 'find', 'pick', 'notice', 'confirm', 'situation', 'schedule', 'alerts', 'keeper', 'warmup', 'check', 'result', 'coach', 'practice', 'records'];
 // 순서 표시는 모든 화면에서 여섯 단계 하나로 통일합니다. 예매 시기 확인, 예매 정보 입력, 예매 정보 확인은 「예매 시기 확인」, 준비 일정과 알림 등록은 「알림 걸기」, 지킴이 화면부터 예매 결과 기록까지는 「예매 당일」입니다.
 var STEP_OF = { home: 0, find: 0, pick: 1, notice: 1, confirm: 1, practice: 2, coach: 3, situation: 4, schedule: 4, alerts: 4, keeper: 5, warmup: 5, check: 5, result: 5 };
-var STEPS = ['예매 찾기', '예매 시기 확인', '예매 테스트', '코치 리포트', '알림 걸기', '예매 당일'];
+var STEPS = ['예매 찾기', '예매 시기 확인', '예매 테스트', '코치 리포트', '알림 설정', '예매 당일'];
 var TITLES = { home: '홈', find: '예매 찾기', pick: '예매 시기 확인', notice: '예매 정보 입력', confirm: '예매 정보 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
 var cleanups = [], live = [];
 function route() {
@@ -1136,6 +1179,14 @@ function renderSteps(r) {
   }));
 }
 function render() {
+  // 화면에 버튼을 두지 않은 예시 체험의 바로가기 주소입니다.
+  if (location.hash === '#flow-demo' || location.hash === '#alert-demo') {
+    var demoHash = location.hash;
+    // 뒤로 가기로 체험이 다시 시작되지 않게 이 주소를 기록에서 지웁니다.
+    try { history.replaceState(null, '', '#home'); } catch (e) { /* 무시 */ }
+    if (demoHash === '#flow-demo') { flowDemo = true; findOpen('etc', { demo: true }); } else startDemo(exampleInfo());
+    return;
+  }
   cleanups.forEach(function (f) { try { f(); } catch (e) { /* 무시 */ } });
   cleanups = []; live = [];
   if (location.hash === '#goal') { try { history.replaceState(null, '', '#find'); } catch (e) { /* 무시 */ } }
@@ -1207,7 +1258,7 @@ function replaceWarn(event, openAt) {
   if (!n || (sameEvent(n.event, event) && n.openAt === openAt)) return null;
   return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림은 끝나요.');
 }
-// 공지 저장(S2 확정과 예매 10분 전 알림 걸기가 함께 씁니다).
+// 공지 저장(S2 확정과 예매 10분 전 알림 설정가 함께 씁니다).
 // opts.fromGoalCard: 대기 카드에서 들어온 경우 대기 예매를 지웁니다. opts.keepSameTarget: 같은 행사의 예매 테스트 대상은 유지합니다.
 function commitNotice(fields, opts) {
   opts = opts || {};
@@ -1229,7 +1280,7 @@ function commitNotice(fields, opts) {
 }
 // 이 후보로 이미 알림을 걸었는지(같은 행사, 같은 예매 오픈 일시)
 function alertSetFor(c) { return !!(S.notice && sameEvent(S.notice.event, c.title) && S.notice.openAt === c.openAt); }
-// 예매 10분 전 알림 걸기: 후보의 값으로 공지를 저장하고 기본 계획을 만든 뒤 알림 등록 화면을 엽니다(S2, S3, G2 를 거치지 않습니다).
+// 예매 10분 전 알림 설정: 후보의 값으로 공지를 저장하고 기본 계획을 만든 뒤 알림 등록 화면을 엽니다(S2, S3, G2 를 거치지 않습니다).
 function armAlert(c) {
   var ev = c.sources && c.sources[0] ? c.sources[0].evidence : null;
   commitNotice({
@@ -1242,11 +1293,11 @@ function armAlert(c) {
   if (!S.plan || S.plan.noticeId !== S.notice.id) savePlan(defaultPlan('pc'), '규칙 분석', '', 'pc');
   go('alerts');
 }
-// 「예매 10분 전 알림 걸기」 버튼. 다른 공지가 등록돼 있으면 교체 안내를 보여 주고 확인을 받은 뒤 겁니다.
+// 「예매 10분 전 알림 설정」 버튼. 다른 공지가 등록돼 있으면 교체 안내를 보여 주고 확인을 받은 뒤 겁니다.
 // cb 가 있으면(AI 응답 후보) 출처 확인 체크를 해야 활성화됩니다.
 function alertButton(c, cb, cls) {
   var box = h('div', { class: 'msg msg--warn small stack', id: 'alertReplaceWarn', hidden: true });
-  var b = btn('예매 10분 전 알림 걸기', cls || 'btn--primary', function () {
+  var b = btn('예매 10분 전 알림 설정', cls == null ? 'btn--primary' : cls, function () {
     // 같은 예매에 이미 알림을 걸었으면 다시 저장하지 않고 알림 등록 화면만 엽니다. 다시 저장하면 준비 계획과 지킴이 상태가 초기화됩니다.
     if (alertSetFor(c)) { go('alerts'); return; }
     if (cb && !cb.checked) return;
@@ -1289,11 +1340,27 @@ function stadiumOf(text) {
   return best;
 }
 // 연습 사이트 주소 인자: from, title, stadium, scale, qty, jump(15.2)
+// 연습 사이트 화면을 고르는 예매 분야입니다. 야구는 기본값이라 주소에 넣지 않습니다.
+function genreOf(t) {
+  if (t.category === 'musical' || t.category === 'concert') return t.category;
+  var text = (t.title || '') + ' ' + (t.venue || '');
+  if (/농구|KBL/i.test(text)) return 'basketball';
+  if (/축구|K리그/i.test(text)) return 'football';
+  if (/야구|KBO|시리즈|구장|라이온즈|위즈/i.test(text)) return 'baseball';
+  if (t.category === 'sports') return 'sports';
+  if (/뮤지컬/.test(text)) return 'musical';
+  if (/콘서트|투어|라이브|live/i.test(text)) return 'concert';
+  return 'show';
+}
 function siteUrl(t, opts) {
   opts = opts || {};
   var q = ['from=agent', 'title=' + encodeURIComponent(clip(wellFormed(t.title || ''), 120))];
-  var st = stadiumOf(t.venue);
-  if (st) q.push('stadium=' + st);
+  var genre = genreOf(t), st = stadiumOf(t.venue);
+  if (genre !== 'baseball') {
+    q.push('genre=' + genre);
+    if (t.venue) q.push('venue=' + encodeURIComponent(clip(wellFormed(t.venue), 60)));
+    if (t.limit) q.push('limit=' + t.limit);
+  } else if (st) q.push('stadium=' + st);
   var scale = opts.scale != null ? opts.scale : t.queueSize;
   if (QUEUE_SIZES.indexOf(scale) >= 0) q.push('scale=' + scale);
   q.push('qty=' + (t.limit === 1 ? 1 : 2));
@@ -1431,9 +1498,20 @@ function scrHome() {
           btn('삭제', null, function () { goalConfirm.hidden = false; })),
         goalConfirm));
   }
+  var favs = favCands();
+  var favSec = favs.length ? h('section', { class: 'sec', id: 'favList' },
+    h('h2', { class: 'h2' }, '즐겨찾기한 예매'),
+    h('div', { class: 'stack' }, favs.map(function (c) {
+      var st = effStatus(c);
+      return h('div', { class: 'cand cand--link' + (st === 'ended' ? ' cand--ended' : ''), 'data-id': c.id, onclick: function (e) { if (e.target.closest('a, button')) return; pickCand = c; go('pick'); } },
+        h('div', { class: 'row' }, h('strong', null, c.title), badge(STATUS_LABEL[st], STATUS_KIND[st]), c.id === DEMO_CAND ? badge(DEMO_LABEL, 'demo') : null),
+        st === 'upcoming' && c.openAt ? h('p', { class: 'small cand__open' }, '예매 오픈 ' + fmtDT(c.openAt) + ', ' + remainShort(c.openAt)) : c.period ? h('p', { class: 'small' }, '기간 ' + c.period) : null,
+        h('div', { class: 'row' }, btn('즐겨찾기 해제', 'btn--sm', function () { toggleFav(c); render(); })));
+    }))) : null;
   var cats = CAT_IDS.map(function (id) {
     return h('button', { type: 'button', class: 'cat', id: 'cat-' + id, onclick: function () { flowDemo = false; findOpen(id); } },
-      h('strong', null, CAT[id].label), h('span', { class: 'small muted' }, CAT[id].desc));
+      h('span', { class: 'cat__head' }, h('strong', null, CAT[id].label), id === DEMO_CAT ? badge(DEMO_LABEL, 'demo') : null),
+      h('span', { class: 'small muted' }, CAT[id].desc));
   });
   return h('div', null,
     h('section', { class: 'sec' },
@@ -1442,15 +1520,7 @@ function scrHome() {
       h('div', { class: 'cats', style: 'margin-top:12px' }, cats)),
     card,
     goalCard,
-    h('section', { class: 'sec' },
-      h('h2', { class: 'h2' }, '체험해 보기'),
-      h('div', { class: 'stack' },
-        h('div', { class: 'demo' },
-          btn('10분 전 알림 체험', 'btn--primary btn--big', function () { startDemo(exampleInfo()); }),
-          h('p', { class: 'small muted' }, '약 2분 걸려요. 예시 예매로 경고 1단계부터 3단계, 오픈, 종료까지 시간을 줄여 보여 드려요. 소리가 나요.')),
-        h('div', { class: 'demo' },
-          btn('예매 준비 과정 체험', null, function () { flowDemo = true; findOpen('etc', { demo: true }); }),
-          h('p', { class: 'small muted' }, '약 5분 걸려요. 예시 예매로 예매 찾기부터 준비 일정, 알림 등록, 10분 전 알림까지 단계마다 직접 눌러 진행해요.')))),
+    favSec,
     h('section', { class: 'sec' },
       h('h2', { class: 'h2' }, '티켓 비서가 도와주는 일'),
       h('ul', { class: 'plain' },
@@ -1463,10 +1533,11 @@ function scrHome() {
 /* ---------- 수집 데이터(2026-11-16 수집). 주소, 날짜, 근거 문장은 원문 그대로입니다. ---------- */
 var COLLECT_DATE = '2026-11-16';
 var COLLECT_LABEL = '11월 16일 웹 수집 정보';
+var RECENT_DATE = '2026-11-18', RECENT_LABEL = '11월 18일 웹 수집 정보', LIST_AS_OF = '11월 18일까지 확인한 ';
 var CAT = {
-  sports: { label: '스포츠 예매', desc: '프로야구, 프로축구 등' },
-  musical: { label: '뮤지컬 예매', desc: '지금 예매 중인 공연' },
-  concert: { label: '콘서트 예매', desc: '곧 열리는 공연' },
+  sports: { label: '스포츠 예매', desc: '예매 중, 오픈 예정 경기' },
+  musical: { label: '뮤지컬 예매', desc: '예매 중, 오픈 예정 공연' },
+  concert: { label: '콘서트 예매', desc: '예매 중, 오픈 예정 공연' },
   etc: { label: '기타', desc: '찾는 예매를 직접 입력' }
 };
 var CAT_IDS = ['sports', 'musical', 'concert', 'etc'];
@@ -1481,7 +1552,46 @@ function collectedShow(id, category, title, venue, start, end, url, prices) {
     practice: prices ? { queueSize: 80000, seats: 20000, limit: 4, grades: ['R석', 'S석'], virtual: false } : DEFAULT_PRACTICE
   };
 }
+// 오픈 예정 예매: NOL 티켓 상품 페이지와 오픈 예정 목록에서 확인한 값만 씁니다.
+function collectedOpen(o) {
+  return {
+    id: o.id, category: o.category, title: o.title, status: 'upcoming', period: o.start ? o.start + ' ~ ' + o.end : null, endDate: o.end || null,
+    venue: o.venue || null, seller: 'NOL 티켓', sellerUrl: o.url, openAt: Date.parse(o.open), openText: null, limit: o.limit || null,
+    grades: o.prices || null, method: null, notes: o.notes || null, source: '수집 데이터', recent: true,
+    sources: [{ name: 'NOL 티켓 예매 페이지', date: RECENT_DATE, url: o.url, evidence: o.evidence || null }],
+    practice: { queueSize: o.queue || 180000, seats: 20000, limit: o.limit || 4, grades: o.seats || ['R석', 'S석', 'A석'], virtual: !o.seats }
+  };
+}
 var COLLECTED = [
+  // 시연용 가상 예매: 오픈 일시가 항상 3일 뒤라 예매 테스트와 10분 전 알림까지 이어서 볼 수 있습니다.
+  {
+    id: DEMO_CAND, category: 'sports', sub: 'baseball', title: '2026 가상 한국시리즈 1차전', status: 'upcoming', period: null, endDate: null,
+    venue: '잠실야구장', seller: '예시티켓', sellerUrl: null, openAt: dayAt(3, 14, 0), openText: null, limit: 4, grades: null, method: null,
+    notes: '시연용 가상 경기예요.', source: '예시 응답', sources: [],
+    // 50만 규모는 대부분 차례 전에 매진되므로 시연은 18만 규모로 진행합니다.
+    practice: { queueSize: 180000, seats: 24000, limit: 4, grades: ['테이블석', '내야 지정석', '외야 지정석'], virtual: true }
+  },
+  {
+    id: 'kbl2026', category: 'sports', sub: 'basketball', title: '2026-27 KBL 프로농구 정규리그', status: 'on_sale', period: '2026-10-03 ~ 2027-04-11', endDate: '2027-04-11',
+    venue: '구단별 홈 경기장', seller: 'KBL 통합 홈페이지와 앱', sellerUrl: null, openAt: null, openText: null, limit: null, grades: null,
+    method: '경기 당일 현장 매표소에서도 구매 가능', notes: null, source: '수집 데이터', recent: true,
+    sources: [{ name: '아이뉴스24', date: '2026-10-02', url: 'https://www.inews24.com/view/2011364', evidence: '경기 티켓은 KBL 통합 홈페이지와 모바일 애플리케이션(앱)에서 예매할 수 있으며' }],
+    practice: DEFAULT_PRACTICE
+  },
+  {
+    id: 'k2po2026', category: 'sports', sub: 'football', title: '2026 K리그2 승격 플레이오프', status: 'not_announced', period: '2026-12-02 ~ 2026-12-05', endDate: '2026-12-05',
+    venue: '순위가 높은 팀의 홈 경기장', seller: null, sellerUrl: null, openAt: null, openText: null, limit: null, grades: null, method: null,
+    notes: '준플레이오프 12월 2일 19:00, 플레이오프 12월 5일 16:30', expected: '2026년 11월 18일 기준으로 예매 일정을 찾지 못했어요.',
+    whereToCheck: ['K리그 공식 안내', '구단별 예매처 안내'], source: '수집 데이터', recent: true,
+    sources: [{ name: '뉴스핌', date: '2026-10-27', url: 'https://www.newspim.com/news/view/20261027001017', evidence: '준PO는 12월 2일 오후 7시에 열린다.' }],
+    practice: DEFAULT_PRACTICE
+  },
+  collectedOpen({ id: 'm-phantom', category: 'musical', title: '뮤지컬 〈오페라의 유령〉 40주년 스페셜 시즌', venue: '블루스퀘어 우리은행홀', start: '2026-12-18', end: '2027-02-28', url: 'https://nol.yanolja.com/ticket/products/26013995', open: '2026-11-20T14:00:00+09:00', prices: 'VIP석 190,000원, R석 160,000원, S석 130,000원, A석 90,000원', notes: '이번 오픈은 12월 18일부터 20일까지 공연분', evidence: '티켓오픈 일정: 11월 20일(금) 오후 2시', seats: ['VIP석', 'R석', 'S석', 'A석'] }),
+  collectedOpen({ id: 'm-frozen', category: 'musical', title: '뮤지컬 〈겨울왕국〉 한국 초연', venue: '샤롯데씨어터', start: '2026-08-13', end: '2027-03-01', url: 'https://nol.yanolja.com/ticket/products/26007416', open: '2026-11-25T14:00:00+09:00', limit: 4, prices: 'VIP석 190,000원, R석 160,000원, S석 130,000원, A석 90,000원', notes: '이번 오픈은 2027년 1월 5일부터 31일까지 공연분', evidence: '티켓오픈 일정: 11월 25일(수) 14시', seats: ['VIP석', 'R석', 'S석', 'A석'] }),
+  collectedOpen({ id: 'm-hamilton', category: 'musical', title: '뮤지컬 〈해밀턴〉 내한공연 부산', url: 'https://nol.yanolja.com/ticket/products/26015651', open: '2026-11-26T11:00:00+09:00' }),
+  collectedOpen({ id: 'c-sontaejin', category: 'concert', title: '2027 손태진 전국투어 콘서트 〈Bon Voyage〉 서울', url: 'https://nol.yanolja.com/ticket/products/26016461', open: '2026-11-19T19:00:00+09:00' }),
+  collectedOpen({ id: 'c-day6', category: 'concert', title: '2026 DAY6 Special Concert 〈The Present〉', venue: 'KSPO DOME', start: '2026-12-18', end: '2026-12-20', url: 'https://nol.yanolja.com/ticket/products/26016335', open: '2026-11-20T20:00:00+09:00', limit: 2, prices: '스탠딩 154,000원, 지정석 154,000원', notes: '팬클럽 선예매는 11월 19일 20:00', evidence: '일반 예매: 2026년 11월 20일 (금) 8PM ~ (KST)', queue: 250000, seats: ['스탠딩', '지정석'] }),
+  collectedOpen({ id: 'c-thornapple', category: 'concert', title: '쏜애플 콘서트 〈디오라마〉', url: 'https://nol.yanolja.com/ticket/products/26016745', open: '2026-11-23T19:00:00+09:00' }),
   {
     id: 'ks2026', category: 'sports', sub: 'baseball', title: '2026 KBO 한국시리즈', status: 'ended',
     period: '2026-11-03 ~ 2026-11-08', endDate: '2026-11-08',
@@ -1511,12 +1621,47 @@ var COLLECTED = [
   collectedShow('c-shin', 'concert', '2026 신용재 콘서트 〈GRAVITY〉', '코엑스 오디토리움', '2026-12-24', '2026-12-25', 'https://nol.yanolja.com/ticket/products/26015568'),
   collectedShow('c-tei', 'concert', '2026 테이 크리스마스 콘서트 〈산테이 할아버지는 알고 계신대〉', '코엑스아티움 우리은행홀', '2026-12-24', '2026-12-25', 'https://nol.yanolja.com/ticket/products/26015427', 'R석 143,000원, S석 132,000원')
 ];
+var CAT_LIST = {
+  sports: [DEMO_CAND, 'kbl2026', 'k2po2026', 'kbo2027', 'ks2026'],
+  musical: ['m-phantom', 'm-frozen', 'm-hamilton', 'm-rebecca', 'm-twocities', 'm-gwanghwamun'],
+  concert: ['c-sontaejin', 'c-day6', 'c-thornapple', 'c-sung', 'c-shin', 'c-tei']
+};
+var SPORT_LIST = { '프로야구': [DEMO_CAND, 'kbo2027', 'ks2026'], '프로농구': ['kbl2026'], '프로축구': ['k2po2026'] };
+function favKey(c) { return collected(c.id) ? c.id : 'title:' + c.title; }
+function favEntryKey(f) { return f.ref || 'title:' + f.title; }
+function isFav(c) { var k = favKey(c); return S.favorites.some(function (f) { return favEntryKey(f) === k; }); }
+// 즐겨찾기를 켜고 끕니다. 돌려주는 값은 바뀐 뒤의 상태입니다.
+function toggleFav(c) {
+  var k = favKey(c), on = isFav(c);
+  if (on) S.favorites = S.favorites.filter(function (f) { return favEntryKey(f) !== k; });
+  else S.favorites = cleanFavorites([collected(c.id) ? { ref: c.id } : {
+    title: c.title, category: c.category, status: c.status, period: c.period, endDate: c.endDate, venue: c.venue, seller: c.seller,
+    sellerUrl: c.sellerUrl, sourceUrl: c.sources && c.sources[0] ? c.sources[0].url : null, openAt: c.openAt, limit: c.limit, notes: c.notes, source: c.source
+  }].concat(S.favorites));
+  save('favorites');
+  return !on;
+}
+function favCands() {
+  return S.favorites.map(function (f) {
+    if (f.ref) return collected(f.ref);
+    return {
+      id: 'fav', category: f.category, title: f.title, status: f.status, period: f.period, endDate: f.endDate, venue: f.venue, seller: f.seller, sellerUrl: f.sellerUrl,
+      openAt: f.openAt, openText: null, limit: f.limit, grades: null, method: null, notes: f.notes, expected: null, whereToCheck: [], source: f.source,
+      sources: f.sourceUrl ? [{ name: 'AI 응답 출처', date: null, url: f.sourceUrl, evidence: null }] : [],
+      practice: { queueSize: 80000, seats: 20000, limit: f.limit || 4, grades: ['R석', 'S석', 'A석'], virtual: true }
+    };
+  }).filter(Boolean);
+}
 function collected(id) { return COLLECTED.filter(function (c) { return c.id === id; })[0]; }
 // 기간의 끝 날짜가 오늘보다 과거이면 표시 상태는 「종료」입니다.
-function effStatus(c) { return c.endDate && validKey(c.endDate) && keyDiff(c.endDate, dayKey(Date.now())) > 0 ? 'ended' : c.status; }
-function sourceLabel(c) { return c.source === '수집 데이터' ? COLLECT_LABEL : c.source; }
+function effStatus(c) {
+  if (c.endDate && validKey(c.endDate) && keyDiff(c.endDate, dayKey(Date.now())) > 0) return 'ended';
+  // 모아 둔 예매는 오픈 일시가 지나면 예매 중으로 표시합니다.
+  return c.source === '수집 데이터' && c.status === 'upcoming' && c.openAt && c.openAt <= Date.now() ? 'on_sale' : c.status;
+}
+function sourceLabel(c) { return c.id === DEMO_CAND ? '시연용 예시' : c.source === '수집 데이터' ? (c.recent ? RECENT_LABEL : COLLECT_LABEL) : c.source; }
 // 규칙으로 수집 데이터에서 찾습니다. 작품이나 가수 이름이 맞으면 그 후보만 돌려줍니다.
-var NAME_KEYS = [['레베카', 'm-rebecca'], ['두도시이야기', 'm-twocities'], ['광화문연가', 'm-gwanghwamun'], ['성시경', 'c-sung'], ['신용재', 'c-shin'], ['gravity', 'c-shin'], ['산테이', 'c-tei'], ['테이크리스마스', 'c-tei'], ['테이', 'c-tei']];
+var NAME_KEYS = [['오페라의유령', 'm-phantom'], ['겨울왕국', 'm-frozen'], ['해밀턴', 'm-hamilton'], ['데이식스', 'c-day6'], ['day6', 'c-day6'], ['쏜애플', 'c-thornapple'], ['디오라마', 'c-thornapple'], ['손태진', 'c-sontaejin'], ['프로농구', 'kbl2026'], ['kbl', 'kbl2026'], ['승격플레이오프', 'k2po2026'], ['레베카', 'm-rebecca'], ['두도시이야기', 'm-twocities'], ['광화문연가', 'm-gwanghwamun'], ['성시경', 'c-sung'], ['신용재', 'c-shin'], ['gravity', 'c-shin'], ['산테이', 'c-tei'], ['테이크리스마스', 'c-tei'], ['테이', 'c-tei']];
 // 한국시리즈 키워드(한국시리즈, 코리안시리즈, 코시, KS)
 function isKsText(text) {
   var low = String(text).toLowerCase(), t = low.replace(/\s+/g, '');
@@ -1540,8 +1685,8 @@ function matchCollected(text) {
   });
   if (hits.length) return hits;
   if (/야구|kbo|포스트시즌/.test(t)) return ['kbo2027', 'ks2026'];
-  if (/뮤지컬/.test(t)) return ['m-rebecca', 'm-twocities', 'm-gwanghwamun'];
-  if (/콘서트|공연/.test(t)) return ['c-sung', 'c-shin', 'c-tei'];
+  if (/뮤지컬/.test(t)) return CAT_LIST.musical;
+  if (/콘서트|공연/.test(t)) return CAT_LIST.concert;
   return null;
 }
 
@@ -1657,7 +1802,7 @@ function scrFind() {
   if (!findState) findState = { category: 'etc', msgs: [], fromCard: false, lastQuery: '', send: null, demo: false };
   var st = findState;
   var log = h('div', { class: 'chat', id: 'chatLog', role: 'log', 'aria-live': 'polite', 'aria-label': '예매 찾기 대화' });
-  var inp = h('input', { type: 'text', id: 'findInput', maxlength: 200, placeholder: '찾는 예매를 입력해 주세요', autocomplete: 'off' });
+  var inp = h('input', { type: 'text', id: 'findInput', maxlength: 200, placeholder: FIND_HINT, autocomplete: 'off' });
   var composing = false;
   inp.addEventListener('compositionstart', function () { composing = true; });
   inp.addEventListener('compositionend', function () { composing = false; });
@@ -1668,14 +1813,15 @@ function scrFind() {
     try { el.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 무시 */ }
   }
   function svcCands(text, ids, query, notes) {
-    addMsg({ who: 'svc', text: text, notes: notes || [], cands: ids.map(collected), aiBtn: query });
+    // 최신 정보 찾기 버튼은 일정 대기 카드의 「다시 찾기」로 들어온 경우에만 보여 줍니다.
+    addMsg({ who: 'svc', text: text, notes: notes || [], cands: ids.map(collected), aiBtn: st.fromCard ? query : null });
   }
   function submitText(raw) {
     var t = clip(wellFormed(String(raw || '')).trim(), 200);
     if (!t) return;
     addMsg({ who: 'user', text: t });
     st.lastQuery = t;
-    var ids = matchCollected(t);
+    var ids = t === DEMO_QUERY ? [DEMO_CAND, 'ks2026'] : matchCollected(t);
     if (ids) {
       var notes = [];
       if (ids.indexOf('ks2026') >= 0 && isKsText(t) && /잠실/.test(t)) notes.push('2026 한국시리즈는 수원과 대구에서 열려서 잠실 경기는 없었어요.');
@@ -1685,18 +1831,30 @@ function scrFind() {
   function choose(label) {
     addMsg({ who: 'user', text: label });
     st.lastQuery = label;
-    if (label === '프로야구') svcCands('프로야구 예매를 찾아봤어요.', ['kbo2027', 'ks2026'], label);
+    if (SPORT_LIST[label]) svcCands(label + ' 예매를 찾아봤어요.', SPORT_LIST[label], label);
     else addMsg({ who: 'svc', text: '이 종목은 아직 모아 둔 정보가 없어요. AI 웹 검색으로 찾아볼게요.', ai: { query: label } });
   }
   function candCard(c) {
     var s = effStatus(c);
-    return h('div', { class: 'cand' + (s === 'ended' ? ' cand--ended' : ''), 'data-id': c.id },
-      h('div', { class: 'row' }, h('strong', null, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s])),
-      c.period || c.openAt || c.openText ? h('p', { class: 'small' }, c.period ? '기간 ' + c.period : c.openAt ? '예매 오픈 ' + fmtDT(c.openAt) : c.openText) : null,
+    function openDetail() { pickCand = c; go('pick'); }
+    // 카드 어디를 눌러도 자세히 보기로 이동합니다. 글자를 끌어 선택한 경우(포인터가 움직인 경우)와 카드 안의 버튼은 제외합니다.
+    var downX = null, downY = null;
+    function onCardDown(e) { downX = e.clientX; downY = e.clientY; }
+    function onCardClick(e) {
+      if (e.target.closest('a, button')) return;
+      // detail 이 0 이면 포인터 없이 발생한 클릭(보조기술 등)이라 이동량을 보지 않습니다.
+      var moved = e.detail !== 0 && downX !== null && Math.hypot(e.clientX - downX, e.clientY - downY) > 6;
+      downX = downY = null;
+      if (!moved) openDetail();
+    }
+    return h('div', { class: 'cand cand--link' + (s === 'ended' ? ' cand--ended' : ''), 'data-id': c.id, onpointerdown: onCardDown, onclick: onCardClick },
+      h('div', { class: 'row' }, h('strong', null, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s]), c.id === DEMO_CAND ? badge(DEMO_LABEL, 'demo') : null),
+      s === 'upcoming' && c.openAt ? h('p', { class: 'small cand__open' }, '예매 오픈 ' + fmtDT(c.openAt)) : null,
+      c.period ? h('p', { class: 'small' }, '기간 ' + c.period) : s !== 'upcoming' && (c.openAt || c.openText) ? h('p', { class: 'small' }, c.openAt ? '예매 오픈 ' + fmtDT(c.openAt) : c.openText) : null,
       c.venue ? h('p', { class: 'small' }, '장소 ' + c.venue) : null,
       c.seller ? h('p', { class: 'small' }, '예매처 ' + c.seller) : null,
       s === 'ended' ? h('p', { class: 'small', style: 'font-weight:600' }, c.category === 'sports' ? '올해 예매는 끝났어요' : '이 예매는 끝났어요') : null,
-      h('div', { class: 'row' }, srcTag(sourceLabel(c)), btn('자세히 보기', 'btn--sm', function () { pickCand = c; go('pick'); })));
+      h('div', { class: 'row' }, srcTag(sourceLabel(c)), btn('자세히 보기', 'btn--sm', openDetail)));
   }
   function candsBlock(list) {
     var active = list.filter(function (c) { return effStatus(c) !== 'ended'; });
@@ -1715,13 +1873,15 @@ function scrFind() {
     if (m.choices) {
       var chosen = m.chosenList || (m.chosenList = []);
       var cbtns = m.choices.map(function (c) {
-        var cb = btn(c, 'btn--sm', function () {
+        // 배지는 보조 표시라 버튼 이름에서 빼고 title 로 알려 줍니다.
+        var isDemo = c === DEMO_CHOICE;
+        var cb = btn(isDemo ? [c, h('span', { class: 'badge badge--demo', 'aria-hidden': 'true' }, DEMO_LABEL)] : c, 'btn--sm', function () {
           if (chosen.indexOf(c) >= 0) return;
           chosen.push(c);
           cb.disabled = true;
           cb.setAttribute('aria-pressed', 'true');
           choose(c);
-        }, { disabled: chosen.indexOf(c) >= 0, 'aria-pressed': chosen.indexOf(c) >= 0 ? 'true' : null });
+        }, { disabled: chosen.indexOf(c) >= 0, 'aria-pressed': chosen.indexOf(c) >= 0 ? 'true' : null, title: isDemo ? DEMO_LABEL : null });
         return cb;
       });
       parts.push(h('div', { class: 'row' }, cbtns));
@@ -1772,9 +1932,12 @@ function scrFind() {
   st.msgs.forEach(function (m) { log.appendChild(renderMsg(m)); });
   if (!st.msgs.length) {
     var c = st.category;
-    if (c === 'sports') addMsg({ who: 'svc', text: '어떤 종목을 찾고 있나요?', choices: ['프로야구', '프로축구', '프로농구', '프로배구'] });
-    else if (c === 'musical') addMsg({ who: 'svc', text: '11월 16일에 확인한 뮤지컬이에요.', cands: ['m-rebecca', 'm-twocities', 'm-gwanghwamun'].map(collected), other: true });
-    else if (c === 'concert') addMsg({ who: 'svc', text: '11월 16일에 확인한 콘서트예요.', cands: ['c-sung', 'c-shin', 'c-tei'].map(collected), other: true });
+    if (c === 'sports') {
+      addMsg({ who: 'svc', text: '어떤 종목을 찾고 있나요?', choices: ['프로야구', '프로축구', '프로농구', '프로배구'] });
+      if (!st.send && !st.demo) addMsg({ who: 'svc', text: LIST_AS_OF + '스포츠 예매예요.', cands: CAT_LIST.sports.map(collected), other: true });
+    }
+    else if (c === 'musical') addMsg({ who: 'svc', text: LIST_AS_OF + '뮤지컬이에요.', cands: CAT_LIST.musical.map(collected), other: true });
+    else if (c === 'concert') addMsg({ who: 'svc', text: LIST_AS_OF + '콘서트예요.', cands: CAT_LIST.concert.map(collected), other: true });
     else addMsg({ who: 'svc', text: '어떤 예매를 찾고 있나요? 편하게 적어 주세요.', suggest: st.demo || st.send ? null : FIND_SUGGEST });
     if (st.demo) {
       addMsg({ who: 'user', text: FIND_EXAMPLE });
@@ -1783,7 +1946,17 @@ function scrFind() {
     }
   }
   if (st.send) { var s0 = st.send; st.send = null; submitText(s0); }
-  var form = h('form', { class: 'findbar', onsubmit: function (e) { e.preventDefault(); if (composing) return; submitText(inp.value); inp.value = ''; } },
+  function demoHintOn() { return st.category === DEMO_CAT && !st.demo && !st.msgs.some(function (m) { return m.who === 'user' && m.text === DEMO_QUERY; }); }
+  // 휴대폰 폭에서는 잘리지 않도록 짧은 문구를 보여 줍니다. 보내는 문장은 같습니다.
+  function syncHint() { inp.placeholder = demoHintOn() ? (window.matchMedia('(max-width:480px)').matches ? DEMO_HINT_SHORT : DEMO_QUERY) : FIND_HINT; }
+  syncHint();
+  var form = h('form', { class: 'findbar', onsubmit: function (e) {
+    e.preventDefault();
+    if (composing) return;
+    submitText(!inp.value.trim() && demoHintOn() ? DEMO_QUERY : inp.value);
+    inp.value = '';
+    syncHint();
+  } },
     h('label', { class: 'sr-only', for: inp.id }, '찾는 예매를 입력해 주세요'),
     h('div', { class: 'findbar__in' }, inp, h('button', { type: 'submit', class: 'btn btn--primary' }, '보내기')));
   return h('div', null,
@@ -1856,13 +2029,13 @@ function scrPick() {
       h('p', { class: 'msg' }, '선택한 예매가 없어요. 예매 찾기에서 골라 주세요.'),
       h('div', { class: 'row' }, btn('예매 찾기', 'btn--primary', function () { findState ? go('find') : findOpen('etc'); }))));
   }
-  var s = effStatus(c), isEx = c.source === '예시 응답', isAi = c.source !== '수집 데이터';
+  var s = effStatus(c), isEx = c.source === '예시 응답', isDemo = c.id === DEMO_CAND, isAi = c.source !== '수집 데이터' && !isDemo;
   // 값이 없는 항목은 표에서 뺍니다.
   function row(k, v) { return v == null || v === '' ? null : h('tr', null, h('th', { scope: 'row' }, k), h('td', { class: 'any' }, v)); }
   var p = c.practice || DEFAULT_PRACTICE;
   var table = h('div', { class: 'tbl tbl--fit', id: 'pickInfo' }, h('table', null, h('tbody', null,
     row('행사', c.title), row('분야', CAT[c.category] ? CAT[c.category].label : '기타'),
-    row('상태', STATUS_LABEL[s] + (s !== c.status ? '(기간 종료로 표시)' : '')),
+    row('상태', STATUS_LABEL[s] + (s === 'ended' && c.status !== 'ended' ? '(기간 종료로 표시)' : '')),
     row('일정이나 기간', c.period), row('장소', c.venue),
     row('예매처', c.seller ? [c.seller, c.sellerUrl ? [' ', h('a', { href: c.sellerUrl, target: '_blank', rel: 'noopener noreferrer' }, '예매 페이지')] : null] : null),
     row('예매 오픈 일시', c.openAt ? fmtDT(c.openAt) : c.openText),
@@ -1887,40 +2060,48 @@ function scrPick() {
   }
   var savedMsg = h('p', { class: 'small', 'aria-live': 'polite' });
   function saved() { savedMsg.replaceChildren('일정 대기로 저장했어요. 홈에서 볼 수 있어요. ', h('a', { href: '#home' }, '홈으로')); }
-  var testBtn = btn('이 예매 조건으로 예매 테스트', s === 'ended' || s === 'upcoming' ? 'btn--primary' : null, function () { startTest(c); });
+  var testBtn = btn('예매 테스트하기', s === 'on_sale' && c.sellerUrl ? null : s === 'not_announced' ? null : 'btn--primary', function () { startTest(c); });
+  function favLabel(on) { return [h('span', { 'aria-hidden': 'true' }, on ? '★ ' : '☆ '), on ? '즐겨찾기 해제' : '이 예매 즐겨찾기']; }
+  var favOn = isFav(c);
+  var favBtn = btn(favLabel(favOn), null, function () {
+    favOn = toggleFav(c);
+    favBtn.replaceChildren.apply(favBtn, favLabel(favOn));
+    favBtn.setAttribute('aria-pressed', favOn ? 'true' : 'false');
+    savedMsg.replaceChildren(favOn ? '즐겨찾기에 담았어요. 홈에서 볼 수 있어요. ' : '즐겨찾기에서 뺐어요. ', h('a', { href: '#home' }, '홈으로'));
+  }, { 'aria-pressed': favOn ? 'true' : 'false' });
   // 예매 시기 상자
   var past = pastOpenText(c);
   var whenBox = h('div', { class: 'box box--soft stack', id: 'pickWhen', style: 'gap:2px' }, h('p', { class: 'lbl' }, '예매 시기'),
     s === 'upcoming' && c.openAt ? [h('p', null, '예매 오픈: ' + fmtShort(c.openAt)), h('p', { class: 'small' }, c.openAt > Date.now() ? '남은 시간: ' + remainShort(c.openAt) : remainShort(c.openAt))]
-      : s === 'on_sale' ? [h('p', null, '예매 중이에요.'), c.period ? h('p', { class: 'small' }, '기간: ' + c.period) : null]
+      : s === 'on_sale' ? [h('p', null, '예매 중이에요.'), c.openAt ? h('p', { class: 'small' }, '예매 오픈: ' + fmtShort(c.openAt)) : null, c.period ? h('p', { class: 'small' }, '기간: ' + c.period) : null]
       : s === 'not_announced' ? [h('p', null, '예매 오픈 일시가 아직 나오지 않았어요.'), c.expected ? h('p', { class: 'small' }, '예상 시기: ' + c.expected) : null]
       : [h('p', null, past ? '지난 예매 오픈: ' + past : '지난 예매 오픈 일시는 확인되지 않았어요.')]);
   // 알림 걸기를 할 수 없는 상태의 안내
-  var alertNote = s === 'ended' ? h('p', { class: 'small muted', id: 'alertNote' }, '다음 예매 일정이 나오면 알림을 걸 수 있어요.')
-    : s === 'not_announced' ? h('p', { class: 'small muted', id: 'alertNote' }, '예매 오픈 일시가 나오면 알림을 걸 수 있어요.') : null;
+  var alertNote = s === 'ended' ? h('p', { class: 'small muted', id: 'alertNote' }, '다음 예매 일정이 나오면 알림을 설정할 수 있어요.')
+    : s === 'not_announced' ? h('p', { class: 'small muted', id: 'alertNote' }, '예매 오픈 일시가 나오면 알림을 설정할 수 있어요.') : null;
   var actions = [], goalWarn = null;
   if (s === 'ended') {
     var wg = waitGoalButton('다음 예매 일정 대기로 저장', null, c, true, saved);
     actions.push(testBtn, wg.btn); goalWarn = wg.box;
   } else if (s === 'on_sale') {
     if (c.sellerUrl) actions.push(h('a', { class: 'btn btn--primary', href: c.sellerUrl, target: '_blank', rel: 'noopener noreferrer' }, '예매처에서 예매'));
-    actions.push(testBtn);
+    actions.push(testBtn, favBtn);
   } else if (s === 'not_announced') {
     var wg2 = waitGoalButton('일정 대기로 저장', 'btn--primary', c, false, saved);
     actions.push(wg2.btn, btn('확인 알림 일정 파일 내려받기', null, function () { downloadGoalIcs(c.title); }));
     goalWarn = wg2.box;
   }
-  var prep = null, cbLabel = null;
+  var prep = null, prepRow = null, cbLabel = null;
   if (s === 'upcoming') {
     var cb = isAi ? h('input', { type: 'checkbox', id: uid('pchk') }) : null;
-    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처를 확인했다고 체크하면 알림 걸기와 준비 일정 만들기를 할 수 있어요.');
-    // 주 버튼: 예매 테스트(체크 없이 가능)와 예매 10분 전 알림 걸기(AI 응답이면 출처 확인 체크 필요)
+    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처를 확인했다고 체크하면 알림을 설정할 수 있어요.');
+    // 주 버튼: 예매 테스트(체크 없이 가능)와 예매 10분 전 알림 설정(AI 응답이면 출처 확인 체크 필요)
     // 이미 이 예매에 알림을 걸었으면 다시 걸지 않고 알림 등록 화면으로 가는 버튼을 둡니다.
     var already = alertSetFor(c);
-    var ab = alertButton(c, cb, 'btn--primary');
-    actions.push(testBtn, already ? btn('알림 등록 보기', null, function () { go('alerts'); }) : ab.btn);
-    goalWarn = already ? h('p', { class: 'msg msg--good small', id: 'pickAlertDone' }, '이 예매에 알림을 걸었어요(' + fmtDT(c.openAt) + ').') : ab.box;
-    var prepBtn = btn('값을 확인하고 준비 일정 만들기', null, function () {
+    var ab = alertButton(c, cb, '');
+    actions.push(testBtn, already ? btn('알림 등록 보기', null, function () { go('alerts'); }) : ab.btn, favBtn);
+    goalWarn = already ? h('p', { class: 'msg msg--good small', id: 'pickAlertDone' }, '이 예매에 알림을 설정했어요(' + fmtDT(c.openAt) + ').') : ab.box;
+    var prepBtn = btn('준비 일정 만들기', null, function () {
       if (cb && !cb.checked) return;
       var ev = c.sources[0] ? c.sources[0].evidence : null;
       draft = {
@@ -1939,20 +2120,21 @@ function scrPick() {
       cb.addEventListener('change', function () { prepBtn.disabled = !cb.checked; ab.btn.disabled = !cb.checked; hint.hidden = cb.checked; });
     } else hint.hidden = true;
     cbLabel = cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처에서 예매 오픈 일시를 확인했어요' : '공식 안내에서 예매 오픈 일시를 직접 확인했어요') : null;
-    prep = h('div', { class: 'stack' }, hint, replaceWarn(c.title, c.openAt), h('div', { class: 'row' }, prepBtn));
+    prep = h('div', { class: 'stack' }, hint, replaceWarn(c.title, c.openAt));
+    prepRow = h('div', { class: 'row' }, prepBtn);
   }
   var delGoal = s === 'ended' && S.goal && findState && findState.fromCard && sameEvent(S.goal.event, c.title) ? h('div', { class: 'msg msg--warn stack', id: 'endedGoal' },
     h('p', null, '일정을 기다리던 예매(' + S.goal.event + ')가 끝났어요. 아래 버튼으로 삭제해 주세요.'),
     h('div', { class: 'row' }, btn('대기 예매 삭제', 'btn--danger', function () { S.goal = null; save('goal'); findState.fromCard = false; render(); }))) : null;
-  var detailSec = h('section', { class: 'sec stack', id: 'pickDetail' }, h('h2', { class: 'h2' }, '예매 상세'), table);
+  var detailSec = h('section', { class: 'sec stack', id: 'pickDetail' }, h('h2', { class: 'h2' }, '예매 상세'), table, prepRow);
   var srcSec = h('section', { class: 'sec stack', id: 'pickSrc' },
     h('h2', { class: 'h2' }, '출처'),
-    h('p', { class: 'msg msg--warn small' }, isAi ? 'AI 검색 결과는 틀릴 수 있어요. 출처를 열어 확인해 주세요.' : '2026년 11월 16일에 모은 정보예요. 예매 전에 예매처 안내를 다시 확인해 주세요.'),
+    h('p', { class: 'msg msg--warn small' }, isDemo ? '시연용 가상 예매예요. 실제 예매처와 관계없어요.' : isAi ? 'AI 검색 결과는 틀릴 수 있어요. 출처를 열어 확인해 주세요.' : '2026년 11월 ' + (c.recent ? '18' : '16') + '일에 모은 정보예요. 예매 전에 예매처 안내를 다시 확인해 주세요.'),
     srcList);
   var nextSec = h('section', { class: 'sec stack', id: 'pickNext' },
     h('h2', { class: 'h2' }, '다음 단계'),
     cbLabel,
-    actions.length ? h('div', { class: 'row' }, actions) : null,
+    actions.length ? h('div', { class: 'grid3' }, actions) : null,
     alertNote, goalWarn, prep, savedMsg, delGoal,
     h('p', { class: 'small muted' }, '예매 테스트는 전체 화면 연습 사이트에서 해요. 실제 예매처에는 접속하지 않아요.'));
   // 예매 시기 바로 아래에 할 일을 둡니다. 출처 확인 체크가 필요한 AI 결과만 출처를 먼저 보여 줍니다.
@@ -2067,14 +2249,14 @@ function scrNotice() {
       if (!draft.text.trim()) return '예매 안내 글을 먼저 입력해 주세요.';
       return null;
     },
-    example: function () { return draft.exampleId && draft.text === EX[draft.exampleId].text && !draft.imageUrl ? EX[draft.exampleId].resp : null; },
+    example: function () { return draft.exampleId && EX[draft.exampleId] && draft.text === EX[draft.exampleId].text && !draft.imageUrl ? EX[draft.exampleId].resp : null; },
     exampleMissing: '예시 응답은 준비된 예시 안내를 골랐을 때만 쓸 수 있어요. 직접 입력으로 진행해 주세요.',
     validate: validateNotice,
     onApply: function (v, source) { draft.result = { values: v.values, evidence: v.evidence, source: source }; go('confirm'); },
     fallbackLabel: '직접 입력으로 전환',
     fallbackHint: '「직접 입력으로 전환」을 누르면 AI 없이 예매 오픈 일시와 예매처를 직접 적을 수 있어요.',
     onFallback: function () { draft.result = { values: {}, evidence: {}, source: '직접 입력' }; go('confirm'); },
-    startExample: flowDemo && !!draft.exampleId
+    startExample: flowDemo && !!draft.exampleId && !!EX[draft.exampleId]
   });
   sync();
   return h('div', null,
@@ -2247,7 +2429,7 @@ function needNotice(title) {
   return h('div', null, h('section', { class: 'sec stack' },
     h('h1', { class: 'h1' }, title),
     h('p', { class: 'msg' }, '입력한 예매 정보가 없어요. 예매 정보를 먼저 입력해 주세요.'),
-    h('div', { class: 'row' }, btn('예매 정보 입력', 'btn--primary', function () { go('notice'); }), btn('10분 전 알림 체험', null, function () { startDemo(exampleInfo()); }))));
+    h('div', { class: 'row' }, btn('예매 찾기', 'btn--primary', function () { go('home'); }), btn('예매 정보 입력', null, function () { go('notice'); }))));
 }
 function savePlan(v, source, scheduleText, device) {
   var sched = Array.isArray(v.schedule) && v.schedule.length ? v.schedule : defaultSchedule(S.notice.openAt);
@@ -2471,8 +2653,11 @@ function scrAlerts() {
       h('div', { class: 'box box--soft stack', id: 'alertSummary', style: 'margin-top:8px' },
         h('p', { class: 'h3', style: 'margin:0' }, n.event || '행사 이름 미입력'),
         h('dl', { class: 'kv' }, h('dt', null, '예매 오픈 일시'), h('dd', null, fmtDT(n.openAt)), h('dt', null, '남은 시간'), h('dd', null, remainShort(n.openAt))),
-        h('div', { class: 'row' }, btn('예매 테스트', null, function () { testForNotice(n); }))),
-      n.openAt < now ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '예매 오픈 일시가 지났습니다. 체험 모드로 지킴이 화면을 확인할 수 있습니다.') : null),
+        h('div', { class: 'row' },
+          btn('10분 전 알림 체험', 'btn--primary', function () { startDemo(noticeInfo(n), n.id); }),
+          btn('예매 테스트', null, function () { testForNotice(n); })),
+        h('p', { class: 'small muted', id: 'alertDemoHint' }, '약 2분 걸려요. 이 예매로 경고 1단계부터 3단계, 오픈, 종료까지 시간을 줄여 보여 드려요. 소리가 나요.')),
+      n.openAt < now ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '예매 오픈 일시가 지났어요. 10분 전 알림 체험으로 지킴이 화면을 확인할 수 있어요.') : null),
     h('section', { class: 'sec stack' },
       h('h2', { class: 'h2' }, '캘린더 일정 ' + cal.length + '개'),
       h('p', { class: 'small muted' }, '알림 일정 4개(각 10분)와 준비 일정 ' + prepCount + '개(각 날짜 20:00 시작 30분)입니다. 시작 시각에 알림이 울립니다. 시각은 서비스가 계산합니다.'),
@@ -2494,7 +2679,6 @@ function scrAlerts() {
     h('section', { class: 'sec' },
       h('div', { class: 'grid3' },
         btn('지킴이 화면 열기', 'btn--primary btn--big', openRealKeeper),
-        btn('체험 모드', 'btn--big', function () { startDemo(noticeInfo(n), n.id); }),
         btn('상황 다시 입력', 'btn--big', function () { go('situation'); }))));
 }
 
@@ -2649,7 +2833,7 @@ function scrKeeper() {
       demoBox),
     h('section', { class: 'sec stack' },
       h('p', { class: 'msg msg--warn small' }, '이 화면은 켜져 있는 동안에만 동작합니다. 탭을 다른 창으로 가려 두면 경고가 늦어질 수 있습니다. 절전이나 화면 꺼짐에 대비해 캘린더 일정과 휴대폰 알람을 함께 등록하세요.'),
-      !k.demo ? h('div', { class: 'row' }, btn('체험 모드', null, function () { startDemo(k.info, k.noticeId); }), btn('알림 등록 보기', null, function () { go('alerts'); })) : null));
+      !k.demo ? h('div', { class: 'row' }, btn('10분 전 알림 체험', null, function () { startDemo(k.info, k.noticeId); }), btn('알림 등록 보기', null, function () { go('alerts'); })) : null));
 }
 
 /* ---------- 연습 엔진(S6, S9 공용) ---------- */
@@ -3027,11 +3211,11 @@ function coachNextSection(t) {
   var c = targetAsCand(t);
   var area = h('div', { class: 'stack', id: 'coachNext' });
   var items = [btn('조건을 바꿔 다시 테스트', null, function () { launchTest(t); })];
-  // 오픈 예정(저장한 예매 오픈 일시가 미래)이면 예매 10분 전 알림 걸기. 이미 걸었으면 표시와 바로 가기 버튼.
+  // 오픈 예정(저장한 예매 오픈 일시가 미래)이면 예매 10분 전 알림 설정. 이미 걸었으면 표시와 바로 가기 버튼.
   if (!t.ended && t.openAt && t.openAt > Date.now()) {
     if (alertSetFor(c)) {
       area.append(h('div', { class: 'msg msg--good small stack', id: 'alertDone' },
-        h('p', null, '알림을 걸었습니다(' + fmtDT(t.openAt) + ').'),
+        h('p', null, '알림을 설정했어요(' + fmtDT(t.openAt) + ').'),
         h('div', { class: 'row' }, btn('알림 등록 보기', 'btn--sm', function () { go('alerts'); }), btn('지킴이 화면 열기', 'btn--sm', openRealKeeper))));
     } else {
       var cb = t.source !== '수집 데이터' ? h('input', { type: 'checkbox', id: uid('cchk') }) : null;
@@ -3159,7 +3343,8 @@ function scrCoach() {
 /* ---------- S9 예매 테스트(target 이 있을 때): 전체 화면 연습 사이트로 넘길 조건과 열기 버튼 ---------- */
 function scrTargetLaunch(t) {
   var st = stadiumOf(t.venue), stName = { jamsil: '잠실', daegu: '대구', suwon: '수원', gwangju: '광주' }[st];
-  var line = '넘길 조건: ' + t.title + ', 구장 ' + (stName || '연습 사이트 기본값') + ', 대기 인원 ' + num(t.queueSize) + '명, ' + (t.limit === 1 ? 1 : 2) + '매';
+  var place = genreOf(t) === 'baseball' ? '구장 ' + (stName || '연습 사이트 기본값') : '장소 ' + (t.venue || '연습 사이트 기본값');
+  var line = '넘길 조건: ' + t.title + ', ' + place + ', 대기 인원 ' + num(t.queueSize) + '명, ' + (t.limit === 1 ? 1 : 2) + '매';
   return h('div', null, h('section', { class: 'sec stack' },
     h('h1', { class: 'h1' }, '예매 테스트'),
     h('p', { class: 'msg small', id: 'launchLine' }, line),
