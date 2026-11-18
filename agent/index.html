@@ -216,10 +216,10 @@ ol.srcs{margin:0;padding-left:20px;display:grid;gap:10px;overflow-wrap:anywhere}
 </header>
 <main id="view" class="wrap" tabindex="-1"></main>
 <footer class="foot wrap">
-  <p>가상 시뮬레이션입니다. 실제 예매처와 무관하며 실제 결제와 개인정보 입력이 없습니다.</p>
+  <p>연습 화면은 모두 가상이에요. 실제 예매처와 관계없고, 실제 결제나 개인정보 입력도 없어요.</p>
 </footer>
 <div id="flash" aria-hidden="true"></div>
-<noscript><p class="wrap">이 화면은 자바스크립트가 켜져 있어야 동작합니다.</p></noscript>
+<noscript><p class="wrap">이 화면은 자바스크립트가 켜져 있어야 볼 수 있어요.</p></noscript>
 <script>
 (function () {
 'use strict';
@@ -293,7 +293,7 @@ function fmtRemain(ms) {
 // 예매 오픈까지 남은 시간(하루 이상 「4일 뒤」, 하루 미만 「5시간 뒤」, 한 시간 미만 「30분 뒤」). F2, S4, 홈 카드, 코치 리포트가 같이 씁니다.
 function remainShort(openAt) {
   var ms = openAt - Date.now();
-  if (!(ms > 0)) return '예매 오픈 시각이 지났습니다';
+  if (!(ms > 0)) return '예매 오픈 시각이 지났어요';
   if (ms >= 86400000) return Math.floor(ms / 86400000) + '일 뒤';
   if (ms >= 3600000) return Math.floor(ms / 3600000) + '시간 뒤';
   return Math.max(1, Math.ceil(ms / 60000)) + '분 뒤';
@@ -680,10 +680,10 @@ function matchBrace(s, i) {
   return -1;
 }
 function extractJSON(s) {
-  if (typeof s !== 'string' || !s.trim()) return { errs: [['응답', '붙여 넣은 글이 없습니다']] };
+  if (typeof s !== 'string' || !s.trim()) return { errs: [['응답', '붙여 넣은 글이 없어요']] };
   s = s.slice(0, 60000);
   var first = s.indexOf('{'), tries = 0;
-  if (first === -1) return { errs: [['응답', 'JSON 객체를 찾지 못했습니다']] };
+  if (first === -1) return { errs: [['응답', 'JSON 객체를 찾지 못했어요']] };
   for (var i = first; i !== -1 && tries < 30; i = s.indexOf('{', i + 1)) {
     tries++;
     var end = matchBrace(s, i);
@@ -700,7 +700,7 @@ function extractJSON(s) {
       }
     }
   }
-  return { errs: [['응답', 'JSON 문법 오류로 해석하지 못했습니다. Helpy Chat 답변 아래의 「복사」 버튼으로 복사해 다시 붙여 넣어 주세요']] };
+  return { errs: [['응답', 'JSON 문법 오류로 읽지 못했어요. Helpy Chat 답변 아래의 「복사」 버튼으로 복사해 다시 붙여 넣어 주세요']] };
 }
 // Helpy Chat 화면에 보이는 답을 끌어서 복사하면 문자열 안의 따옴표 이스케이프(\")가 빠져 JSON 문법이 깨집니다.
 // 문자열 안의 " 는 뒤따르는 첫 글자가 , } ] : 이거나 글의 끝일 때만 닫는 따옴표로 보고, 그 밖의 " 는 \" 로 바꿉니다. 문자열 안의 줄바꿈과 탭도 이스케이프합니다.
@@ -727,58 +727,58 @@ function repairQuotes(s) {
 }
 function strOrNull(v, n, F, errs) {
   if (v == null) return null;
-  if (typeof v !== 'string') { errs.push([F, '문자열이 아닙니다']); return null; }
+  if (typeof v !== 'string') { errs.push([F, '문자열이 아니에요']); return null; }
   var t = wellFormed(v).trim();
   return t ? clip(t, n) : null;
 }
 var ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})?$/;
 var NOTICE_FIELDS = [['event', '행사 이름'], ['venue', '구장·공연장'], ['openAt', '예매 오픈 일시'], ['seller', '예매처'], ['limitPerPerson', '1인 구매 한도'], ['seatGrades', '좌석 등급'], ['presale', '선예매 조건']];
 function validateNotice(o) {
-  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아니에요']] };
   var errs = [], out = { values: {}, evidence: {} };
   NOTICE_FIELDS.forEach(function (f) {
     var k = f[0], F = k + '(' + f[1] + ')', item = o[k];
-    if (item === undefined) { errs.push([F, '항목이 없습니다']); return; }
-    if (!isPlain(item)) { errs.push([F, 'value 와 evidence 를 가진 객체가 아닙니다']); return; }
+    if (item === undefined) { errs.push([F, '항목이 없어요']); return; }
+    if (!isPlain(item)) { errs.push([F, 'value 와 evidence 를 가진 객체가 아니에요']); return; }
     out.evidence[k] = strOrNull(item.evidence, 300, F + '.evidence', errs);
     var v = item.value;
     if (v == null) { out.values[k] = null; return; }
     if (k === 'openAt') {
       var t = typeof v === 'string' ? v.trim() : '';
-      if (!ISO_RE.test(t) || isNaN(Date.parse(t))) errs.push([F, 'ISO 8601 날짜 문자열이 아닙니다']);
+      if (!ISO_RE.test(t) || isNaN(Date.parse(t))) errs.push([F, 'ISO 8601 날짜 문자열이 아니에요']);
       else out.values[k] = Date.parse(t);
     } else if (k === 'limitPerPerson') {
-      if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 20) errs.push([F, '1부터 20 사이의 정수가 아닙니다']);
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 20) errs.push([F, '1부터 20 사이의 정수가 아니에요']);
       else out.values[k] = v;
     } else if (k === 'seatGrades') {
-      if (!Array.isArray(v) || v.length > 8 || !v.every(function (x) { return typeof x === 'string'; })) errs.push([F, '8개 이하 문자열 배열이 아닙니다']);
+      if (!Array.isArray(v) || v.length > 8 || !v.every(function (x) { return typeof x === 'string'; })) errs.push([F, '8개 이하 문자열 배열이 아니에요']);
       else out.values[k] = v.map(function (x) { return clip(wellFormed(x).trim(), 100); }).filter(Boolean);
     } else out.values[k] = strOrNull(v, 100, F, errs);
   });
   return errs.length ? { errs: errs } : { value: out };
 }
 function validatePlan(o) {
-  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아니에요']] };
   var errs = [], out = {};
-  if (!Array.isArray(o.prep)) errs.push(['prep(준비 목록)', '배열이 아닙니다']);
-  else if (o.prep.length > 8) errs.push(['prep(준비 목록)', '8개를 넘습니다']);
+  if (!Array.isArray(o.prep)) errs.push(['prep(준비 목록)', '배열이 아니에요']);
+  else if (o.prep.length > 8) errs.push(['prep(준비 목록)', '8개를 넘었어요']);
   else {
     out.prep = [];
     o.prep.forEach(function (p, i) {
       var F = 'prep[' + i + ']';
-      if (!isPlain(p)) { errs.push([F, 'when 과 todo 를 가진 객체가 아닙니다']); return; }
+      if (!isPlain(p)) { errs.push([F, 'when 과 todo 를 가진 객체가 아니에요']); return; }
       var when = strOrNull(p.when, 100, F + '.when', errs), todo = strOrNull(p.todo, 500, F + '.todo', errs);
-      if (!todo) { errs.push([F + '.todo', '비어 있습니다']); return; }
+      if (!todo) { errs.push([F + '.todo', '비어 있어요']); return; }
       out.prep.push({ when: when || '', todo: todo });
     });
   }
-  if (!Array.isArray(o.advice)) errs.push(['advice(행동 조언)', '배열이 아닙니다']);
-  else if (o.advice.length > 5) errs.push(['advice(행동 조언)', '5개를 넘습니다']);
+  if (!Array.isArray(o.advice)) errs.push(['advice(행동 조언)', '배열이 아니에요']);
+  else if (o.advice.length > 5) errs.push(['advice(행동 조언)', '5개를 넘었어요']);
   else {
     out.advice = [];
     o.advice.forEach(function (a, i) { var t = strOrNull(a, 500, 'advice[' + i + ']', errs); if (t) out.advice.push(t); });
   }
-  if (QUEUE_SIZES.indexOf(o.queueSize) < 0) errs.push(['queueSize(대기 인원)', QUEUE_SIZES.join(', ') + ' 가운데 하나가 아닙니다']);
+  if (QUEUE_SIZES.indexOf(o.queueSize) < 0) errs.push(['queueSize(대기 인원)', QUEUE_SIZES.join(', ') + ' 가운데 하나가 아니에요']);
   else out.queueSize = o.queueSize;
   out.queueReason = strOrNull(o.queueReason, 500, 'queueReason(대기 인원 근거)', errs) || '';
   // 준비 일정: 오늘부터 예매 오픈 날짜까지만 받고, 범위나 형식이 맞지 않는 항목은 제외합니다(오류로 거부하지 않습니다).
@@ -791,18 +791,18 @@ function validatePlan(o) {
 }
 var GOAL_STATUS = ['announced', 'not_announced', 'ended'];
 function validateGoal(o) {
-  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아니에요']] };
   var errs = [], out = { openAt: null };
-  if (typeof o.event !== 'string' || !o.event.trim()) errs.push(['event(행사 이름)', '비어 있거나 문자열이 아닙니다']);
+  if (typeof o.event !== 'string' || !o.event.trim()) errs.push(['event(행사 이름)', '비어 있거나 문자열이 아니에요']);
   else out.event = clip(wellFormed(o.event).trim(), 100);
   var status = typeof o.status === 'string' ? o.status.trim().toLowerCase() : '';
-  if (GOAL_STATUS.indexOf(status) < 0) errs.push(['status(공지 상태)', GOAL_STATUS.join(', ') + ' 가운데 하나가 아닙니다']);
+  if (GOAL_STATUS.indexOf(status) < 0) errs.push(['status(공지 상태)', GOAL_STATUS.join(', ') + ' 가운데 하나가 아니에요']);
   else out.status = status;
   if (out.status === 'announced') {
     var t = typeof o.openAt === 'string' ? o.openAt.trim() : '';
-    if (!ISO_RE.test(t) || isNaN(Date.parse(t))) errs.push(['openAt(예매 오픈 일시)', 'ISO 8601 날짜 문자열이 아닙니다']);
-    else if (Date.parse(t) <= Date.now()) errs.push(['openAt(예매 오픈 일시)', '이미 지난 일시입니다']);
-    else if (Date.parse(t) > Date.now() + 2 * 365.25 * 86400000) errs.push(['openAt(예매 오픈 일시)', '2년을 넘는 일시입니다']);
+    if (!ISO_RE.test(t) || isNaN(Date.parse(t))) errs.push(['openAt(예매 오픈 일시)', 'ISO 8601 날짜 문자열이 아니에요']);
+    else if (Date.parse(t) <= Date.now()) errs.push(['openAt(예매 오픈 일시)', '이미 지난 일시예요']);
+    else if (Date.parse(t) > Date.now() + 2 * 365.25 * 86400000) errs.push(['openAt(예매 오픈 일시)', '2년을 넘는 일시예요']);
     else out.openAt = Date.parse(t);
   }
   out.seller = strOrNull(o.seller, 100, 'seller(예매처)', errs);
@@ -811,8 +811,8 @@ function validateGoal(o) {
   out.evidence = strOrNull(o.evidence, 300, 'evidence(근거 문장)', errs);
   out.expected = strOrNull(o.expected, 500, 'expected(예상 시기)', errs);
   if (o.whereToCheck == null) out.whereToCheck = [];
-  else if (!Array.isArray(o.whereToCheck)) errs.push(['whereToCheck(확인할 곳)', '배열이 아닙니다']);
-  else if (o.whereToCheck.length > 5) errs.push(['whereToCheck(확인할 곳)', '5개를 넘습니다']);
+  else if (!Array.isArray(o.whereToCheck)) errs.push(['whereToCheck(확인할 곳)', '배열이 아니에요']);
+  else if (o.whereToCheck.length > 5) errs.push(['whereToCheck(확인할 곳)', '5개를 넘었어요']);
   else {
     out.whereToCheck = [];
     o.whereToCheck.forEach(function (w, i) { var s = strOrNull(w, 100, 'whereToCheck[' + i + ']', errs); if (s) out.whereToCheck.push(s); });
@@ -821,21 +821,21 @@ function validateGoal(o) {
   return errs.length ? { errs: errs } : { value: out };
 }
 function validateCoach(o) {
-  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아니에요']] };
   var errs = [], out = {};
-  if (STAGES.indexOf(o.weakStage) < 0) errs.push(['weakStage(약점 단계)', STAGES.join(', ') + ' 가운데 하나가 아닙니다']);
+  if (STAGES.indexOf(o.weakStage) < 0) errs.push(['weakStage(약점 단계)', STAGES.join(', ') + ' 가운데 하나가 아니에요']);
   else out.weakStage = o.weakStage;
   out.reason = strOrNull(o.reason, 500, 'reason(원인 설명)', errs);
-  if (!out.reason) errs.push(['reason(원인 설명)', '비어 있습니다']);
-  if (!isPlain(o.nextSetting)) errs.push(['nextSetting(다음 연습 설정)', '객체가 아닙니다']);
+  if (!out.reason) errs.push(['reason(원인 설명)', '비어 있어요']);
+  if (!isPlain(o.nextSetting)) errs.push(['nextSetting(다음 연습 설정)', '객체가 아니에요']);
   else {
     var ns = o.nextSetting;
-    if (QUEUE_SIZES.indexOf(ns.queueSize) < 0) errs.push(['nextSetting.queueSize', QUEUE_SIZES.join(', ') + ' 가운데 하나가 아닙니다']);
-    if (ns.focus != null && FOCUS_OPTIONS.indexOf(ns.focus) < 0) errs.push(['nextSetting.focus', 'reaction, captcha, seat, null 가운데 하나가 아닙니다']);
+    if (QUEUE_SIZES.indexOf(ns.queueSize) < 0) errs.push(['nextSetting.queueSize', QUEUE_SIZES.join(', ') + ' 가운데 하나가 아니에요']);
+    if (ns.focus != null && FOCUS_OPTIONS.indexOf(ns.focus) < 0) errs.push(['nextSetting.focus', 'reaction, captcha, seat, null 가운데 하나가 아니에요']);
     out.nextSetting = { queueSize: ns.queueSize, focus: ns.focus == null ? null : ns.focus };
   }
   out.task = strOrNull(o.task, 500, 'task(연습 과제)', errs);
-  if (!out.task) errs.push(['task(연습 과제)', '비어 있습니다']);
+  if (!out.task) errs.push(['task(연습 과제)', '비어 있어요']);
   return errs.length ? { errs: errs } : { value: out };
 }
 
@@ -848,16 +848,16 @@ function aiPanel(o) {
   var promptTa = h('textarea', { class: 'code any', rows: 8, readOnly: true, id: uid('prompt') });
   var noteEl = h('p', { class: 'msg small' });
   var copyMsg = h('p', { class: 'muted small', 'aria-live': 'polite' });
-  var respTa = h('textarea', { class: 'code', rows: 6, id: uid('resp'), placeholder: 'Helpy Chat 답변 아래의 「복사」 버튼으로 복사한 답을 붙여 넣으세요' });
+  var respTa = h('textarea', { class: 'code', rows: 6, id: uid('resp'), placeholder: 'Helpy Chat 답변 아래의 「복사」 버튼으로 복사한 답을 붙여 넣어 주세요' });
   var errBox = h('div', { class: 'msg msg--bad small', role: 'alert', hidden: true });
-  var repairMsg = h('p', { class: 'msg small', 'aria-live': 'polite', hidden: true }, '응답의 따옴표 표기를 보정해 읽었습니다. 적용된 값이 맞는지 확인하세요.');
+  var repairMsg = h('p', { class: 'msg small', 'aria-live': 'polite', hidden: true }, '응답의 따옴표 표기를 고쳐서 읽었어요. 적용된 값이 맞는지 확인해 주세요.');
   var fbBtn = btn(o.fallbackLabel, null, function () { repairMsg.hidden = true; o.onFallback(); });
   var helpyPane = h('div', { class: 'stack', role: 'tabpanel' },
     h('ol', { class: 'plain small muted' },
-      h('li', null, '「요청문 복사」를 누릅니다.'),
-      h('li', null, '엘리스 LXP 왼쪽 위 목록에서 「AI Helpy Chat」을 열고 입력창에 붙여 넣어 보냅니다.'),
-      h('li', null, '답변 아래의 「복사」 버튼으로 답을 복사합니다. 화면의 글자를 끌어서 복사하면 따옴표 표기가 빠집니다.'),
-      h('li', null, '아래 「AI 응답 붙여넣기」에 붙여 넣고 「응답 적용」을 누릅니다.')),
+      h('li', null, '「요청문 복사」를 눌러 주세요.'),
+      h('li', null, '엘리스 LXP 왼쪽 위 목록에서 「AI Helpy Chat」을 열고, 입력창에 붙여 넣어 보내 주세요.'),
+      h('li', null, '답변 아래의 「복사」 버튼으로 답을 복사해 주세요. 글자를 끌어서 복사하면 따옴표가 빠져요.'),
+      h('li', null, '아래 「AI 응답 붙여넣기」에 붙여 넣고 「응답 적용」을 눌러 주세요.')),
     noteEl,
     field('요청문', promptTa),
     h('div', { class: 'row' }, btn('요청문 복사', null, copyPrompt), copyMsg),
@@ -879,20 +879,20 @@ function aiPanel(o) {
     var text = promptTa.value;
     function fallback() {
       promptTa.focus(); promptTa.select();
-      copyMsg.textContent = '자동 복사가 되지 않아 요청문을 선택했습니다. Ctrl+C 로 복사하세요.';
+      copyMsg.textContent = '자동 복사가 안 돼서 요청문을 선택해 뒀어요. Ctrl+C 로 복사해 주세요.';
     }
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { copyMsg.textContent = '요청문을 복사했습니다.'; }, fallback);
+        navigator.clipboard.writeText(text).then(function () { copyMsg.textContent = '요청문을 복사했어요.'; }, fallback);
       } else fallback();
     } catch (e) { fallback(); }
   }
   function showErrs(errs, head) {
     // replaceChildren 은 null 을 글자 「null」로 넣으므로 표시할 요소만 모아 넘깁니다.
     var kids = [
-      h('p', null, head || '형식 검사를 통과하지 못했습니다. 요청문을 다시 보내 주세요.'),
+      h('p', null, head || '응답 형식이 맞지 않아요. 요청문을 다시 보내 주세요.'),
       h('ul', { class: 'plain' }, errs.slice(0, 12).map(function (e) { return h('li', null, e[0] + ': ' + e[1]); }))];
-    if (fails >= 2) kids.push(h('p', null, '두 번째 실패입니다. ' + o.fallbackLabel + ' 버튼으로 진행하세요.'));
+    if (fails >= 2) kids.push(h('p', null, '여러 번 실패했어요. 「' + o.fallbackLabel + '」 버튼으로 진행해 주세요.'));
     errBox.replaceChildren.apply(errBox, kids);
     errBox.hidden = false;
     if (fails >= 2) fbBtn.classList.add('btn--primary', 'btn--emph');
@@ -902,7 +902,7 @@ function aiPanel(o) {
     var promptHead = promptTa.value.split('\n')[0];
     if (promptHead.length >= 10 && respTa.value.indexOf(promptHead) >= 0) {
       repairMsg.hidden = true;
-      showErrs([['응답', '요청문은 Helpy Chat 에 보내고, Helpy Chat 답변 아래의 「복사」 버튼으로 복사한 답만 여기에 붙여 넣어 주세요']], '입력란에 요청문이 들어 있습니다.');
+      showErrs([['응답', '요청문은 Helpy Chat 에 보내고, Helpy Chat 답변 아래의 「복사」 버튼으로 복사한 답만 여기에 붙여 넣어 주세요']], '입력란에 요청문이 들어 있어요.');
       return;
     }
     var ex = extractJSON(respTa.value);
@@ -916,18 +916,18 @@ function aiPanel(o) {
     var ex = o.example();
     if (!ex) {
       exPane.replaceChildren(
-        h('p', { class: 'msg' }, o.exampleMissing || '예시 응답은 내장 예시 공지를 골랐을 때만 사용할 수 있습니다.'),
+        h('p', { class: 'msg' }, o.exampleMissing || '예시 응답은 준비된 예시를 골랐을 때만 쓸 수 있어요.'),
         h('div', { class: 'row' }, btn(o.fallbackLabel, null, function () { o.onFallback(); })));
       return;
     }
     var label = o.exampleLabel || '예시 응답';
     exPane.replaceChildren(
-      h('p', { class: 'small muted' }, '내장 예시 응답을 같은 형식 검사에 통과시켜 적용합니다. 적용한 값에는 「' + label + '」 표시가 붙습니다.'),
+      h('p', { class: 'small muted' }, '미리 준비한 응답으로 결과를 볼 수 있어요. 적용한 값에는 「' + label + '」 표시가 붙어요.'),
       h('div', { class: 'row' }, srcTag(label)),
       h('pre', { class: 'json' }, JSON.stringify(ex, null, 2)),
       h('div', { class: 'row' }, btn('예시 응답 적용', 'btn--primary', function () {
         var r = o.validate(ex);
-        if (r.errs) { exPane.appendChild(h('p', { class: 'msg msg--bad' }, '예시 응답이 형식 검사를 통과하지 못했습니다.')); return; }
+        if (r.errs) { exPane.appendChild(h('p', { class: 'msg msg--bad' }, '예시 응답의 형식이 맞지 않아요.')); return; }
         repairMsg.hidden = true; // 예시 응답을 적용하면 이전 AI 응답의 보정 안내를 숨깁니다.
         o.onApply(r.value, label);
       })));
@@ -1155,13 +1155,13 @@ function render() {
 }
 function scrBroken() {
   var confirmBox = h('div', { class: 'msg msg--warn', hidden: true },
-    h('p', null, '등록한 공지, 공지 대기 목표, 알림 계획과 준비 일정, 연습 기록, 알림 응답 기록, 실제 예매 결과를 모두 지웁니다. 되돌릴 수 없습니다.'),
+    h('p', null, '내 예매, 대기 목표, 알림 계획과 준비 일정, 연습 기록, 알림 응답 기록, 실제 예매 결과를 모두 지워요. 되돌릴 수 없어요.'),
     h('div', { class: 'row' },
-      btn('초기화합니다', 'btn--danger', function () { endKeeper(); resetStorage(); go('home'); }),
+      btn('초기화할게요', 'btn--danger', function () { endKeeper(); resetStorage(); go('home'); }),
       btn('취소', null, function () { confirmBox.hidden = true; })));
   return h('div', null, h('section', { class: 'sec stack' },
     h('h1', { class: 'h1' }, '화면 표시 오류'),
-    h('p', { class: 'msg msg--bad' }, '저장 데이터에 문제가 있어 화면을 표시하지 못했습니다.'),
+    h('p', { class: 'msg msg--bad' }, '저장 데이터에 문제가 있어 화면을 보여 드리지 못했어요.'),
     h('div', { class: 'row' }, btn('저장 데이터 초기화', 'btn--primary', function () { confirmBox.hidden = false; }), h('a', { class: 'btn', href: '#home' }, '홈')),
     confirmBox));
 }
@@ -1384,8 +1384,8 @@ function scrHome() {
     var remainEl = h('span', { id: 'myRemain' });
     live.push(function () { setText(remainEl, remainShort(n.openAt)); });
     var confirmBox = h('div', { class: 'msg msg--warn', hidden: true },
-      h('p', null, '내 예매와 알림 계획을 삭제합니다. 연습 기록은 유지됩니다.'),
-      h('div', { class: 'row' }, btn('삭제합니다', 'btn--danger', function () {
+      h('p', null, '내 예매와 알림 계획을 지울까요? 연습 기록은 그대로 남아요.'),
+      h('div', { class: 'row' }, btn('지울게요', 'btn--danger', function () {
         if (keeper && !keeper.demo && keeper.noticeId === n.id) endKeeper();
         S.notice = null; S.plan = null; save('notice'); save('plan'); render();
       }), btn('취소', null, function () { confirmBox.hidden = true; })));
@@ -1400,7 +1400,7 @@ function scrHome() {
         h('dl', { class: 'kv' }, h('dt', null, '예매 오픈 일시'), h('dd', null, fmtDT(n.openAt)), h('dt', null, '남은 시간'), h('dd', null, remainEl)),
         h('div', { class: 'stack', style: 'gap:2px' }, h('p', { class: 'lbl' }, '오늘 할 일'),
           todays.length ? h('ul', { class: 'plain', id: 'todayTasks' }, todays.map(function (s) { return h('li', null, s.title); }))
-            : h('p', { class: 'small muted' }, plan ? '오늘 예정된 준비 일정이 없습니다.' : '준비 일정이 없습니다. 상황 입력을 마치면 준비 일정을 작성합니다.')),
+            : h('p', { class: 'small muted' }, plan ? '오늘은 준비할 일이 없어요.' : '아직 준비 일정이 없어요. 상황을 입력하면 만들어 드려요.')),
         h('div', { class: 'row' },
           btn('예매 테스트', 'btn--primary', function () { testForNotice(n); }),
           btn('지킴이 화면', null, openRealKeeper),
@@ -1414,8 +1414,8 @@ function scrHome() {
   if (S.goal) {
     var g = S.goal;
     var goalConfirm = h('div', { class: 'msg msg--warn', hidden: true },
-      h('p', null, '공지 대기 중인 목표를 삭제합니다.'),
-      h('div', { class: 'row' }, btn('삭제합니다', 'btn--danger', function () { S.goal = null; save('goal'); render(); }), btn('취소', null, function () { goalConfirm.hidden = true; })));
+      h('p', null, '이 대기 목표를 지울까요?'),
+      h('div', { class: 'row' }, btn('지울게요', 'btn--danger', function () { S.goal = null; save('goal'); render(); }), btn('취소', null, function () { goalConfirm.hidden = true; })));
     goalCard = h('section', { class: 'sec', id: 'goalCard' },
       h('h2', { class: 'h2' }, '공지 대기 중인 목표'),
       h('div', { class: 'box stack' },
@@ -1437,41 +1437,40 @@ function scrHome() {
   });
   return h('div', null,
     h('section', { class: 'sec' },
-      h('h1', { class: 'h1' }, '무엇을 예매하시나요?'),
-      h('p', { class: 'lead' }, '분야를 고르면 예매 정보를 찾아 보여 주고, 예매 테스트와 오픈 알림 준비로 이어집니다.'),
+      h('h1', { class: 'h1' }, '어떤 예매를 찾고 있나요?'),
+      h('p', { class: 'lead' }, '분야를 고르면 예매 일정을 찾아 드려요. 미리 연습해 보고, 오픈 10분 전 알림도 받을 수 있어요.'),
       h('div', { class: 'cats', style: 'margin-top:12px' }, cats)),
+    card,
     goalCard,
     h('section', { class: 'sec' },
       h('h2', { class: 'h2' }, '체험해 보기'),
       h('div', { class: 'stack' },
         h('div', { class: 'demo' },
           btn('10분 전 알림 체험', 'btn--primary btn--big', function () { startDemo(exampleInfo()); }),
-          h('p', { class: 'small muted' }, '약 2분 소요. 예시 예매로 경고 1단계부터 3단계, 오픈, 종료까지 줄인 시간으로 진행합니다. 소리가 납니다.')),
+          h('p', { class: 'small muted' }, '약 2분 걸려요. 예시 예매로 경고 1단계부터 3단계, 오픈, 종료까지 시간을 줄여 보여 드려요. 소리가 나요.')),
         h('div', { class: 'demo' },
           btn('예매 준비 과정 체험', null, function () { flowDemo = true; findOpen('etc', { demo: true }); }),
-          h('p', { class: 'small muted' }, '약 5분 소요. 예시 예매로 예매 찾기부터 준비 일정, 알림 등록, 10분 전 알림까지 단계마다 직접 눌러 진행합니다.')))),
-    card,
+          h('p', { class: 'small muted' }, '약 5분 걸려요. 예시 예매로 예매 찾기부터 준비 일정, 알림 등록, 10분 전 알림까지 단계마다 직접 눌러 진행해요.')))),
     h('section', { class: 'sec' },
-      h('h2', { class: 'h2' }, '서비스 구성'),
+      h('h2', { class: 'h2' }, '티켓 비서가 도와주는 일'),
       h('ul', { class: 'plain' },
-        h('li', null, '찾기: 분야를 고르면 수집 데이터와 AI 웹 검색으로 예매 정보를 찾습니다.'),
-        h('li', null, '알림: 오픈 10분 전부터 지킴이 화면, 브라우저, 캘린더가 알림을 겹쳐 보내고, 휴대폰 알람 시각을 함께 안내합니다.'),
-        h('li', null, '연습: 알림에 응답하면 공지 조건으로 구성한 워밍업 연습이 바로 열립니다.'),
-        h('li', null, '코치: 연습 기록을 분석해 약점 단계와 다음 연습 설정을 제시합니다.')),
-      h('p', { class: 'small muted', style: 'margin-top:8px' }, '모든 연습 화면은 가상 시뮬레이션입니다. 실제 예매처에 접속하거나 결제하지 않습니다.')));
+        h('li', null, '예매 찾기: 원하는 예매의 일정과 예매처를 찾아 드려요.'),
+        h('li', null, '예매 테스트: 실제 예매처와 비슷한 화면에서 미리 연습해요.'),
+        h('li', null, '코치 리포트: 어느 단계가 약했는지 짚고 다음 연습을 안내해요.'),
+        h('li', null, '10분 전 알림: 오픈 시각을 놓치지 않게 알려 드려요.'))));
 }
 
 /* ---------- 수집 데이터(2026-11-16 수집). 주소, 날짜, 근거 문장은 원문 그대로입니다. ---------- */
 var COLLECT_DATE = '2026-11-16';
-var COLLECT_LABEL = '수집 데이터 2026-11-16';
+var COLLECT_LABEL = '11월 16일 웹 수집 정보';
 var CAT = {
   sports: { label: '스포츠 예매', desc: '프로야구, 프로축구 등' },
-  musical: { label: '뮤지컬 예매', desc: '진행 중인 공연에서 선택' },
-  concert: { label: '콘서트 예매', desc: '예정된 공연에서 선택' },
+  musical: { label: '뮤지컬 예매', desc: '지금 예매 중인 공연' },
+  concert: { label: '콘서트 예매', desc: '곧 열리는 공연' },
   etc: { label: '기타', desc: '찾는 예매를 직접 입력' }
 };
 var CAT_IDS = ['sports', 'musical', 'concert', 'etc'];
-var STATUS_LABEL = { upcoming: '오픈 예정', on_sale: '예매 중', not_announced: '공지 전', ended: '종료' };
+var STATUS_LABEL = { upcoming: '오픈 예정', on_sale: '예매 중', not_announced: '일정 발표 전', ended: '종료' };
 var STATUS_KIND = { upcoming: 'info', on_sale: 'good', not_announced: 'warn', ended: 'bad' };
 var DEFAULT_PRACTICE = { queueSize: 80000, seats: 20000, limit: 4, grades: ['R석', 'S석', 'A석'], virtual: true };
 function collectedShow(id, category, title, venue, start, end, url, prices) {
@@ -1502,7 +1501,7 @@ var COLLECTED = [
   {
     id: 'kbo2027', category: 'sports', sub: 'baseball', title: '2027 KBO 리그 정규시즌', status: 'not_announced',
     period: null, endDate: null, venue: null, seller: null, sellerUrl: null, openAt: null, openText: null, limit: null, grades: null, method: null,
-    notes: null, expected: '2026년 11월 16일 기준으로 예매 일정을 찾지 못했습니다.', whereToCheck: ['KBO 공지', '구단별 예매처 공지'],
+    notes: null, expected: '2026년 11월 16일 기준으로 예매 일정을 찾지 못했어요.', whereToCheck: ['KBO 공지', '구단별 예매처 공지'],
     source: '수집 데이터', sources: [], practice: DEFAULT_PRACTICE
   },
   collectedShow('m-rebecca', 'musical', '뮤지컬 〈레베카〉', '충무아트센터 대극장', '2026-11-24', '2027-03-14', 'https://nol.yanolja.com/ticket/products/26013993'),
@@ -1547,6 +1546,8 @@ function matchCollected(text) {
 }
 
 /* ---------- AI 웹 검색(후보 여러 개) ---------- */
+// 기타 분야에서 바로 눌러 볼 수 있는 예시 문장
+var FIND_SUGGEST = ['한국시리즈 잠실 경기 예매할 수 있게 도와줘', '뮤지컬 레베카 예매', '성시경 콘서트 예매'];
 var FIND_EXAMPLE = '가상 한국시리즈 1차전 예매 일정을 찾아 줘';
 var FIND_FORMAT = '{\n  "candidates": [\n    {\n      "title": "행사 이름",\n      "category": "sports | musical | concert | etc",\n      "status": "upcoming | on_sale | not_announced | ended",\n      "openAt": "2026-11-20T14:00:00+09:00 또는 null",\n      "period": "2026-11-24 ~ 2027-03-14 또는 null",\n      "endDate": "2027-03-14 또는 null",\n      "venue": "장소 또는 null",\n      "seller": "예매처 또는 null",\n      "sellerUrl": "예매 페이지 주소 또는 null",\n      "limitPerPerson": 4,\n      "sourceUrl": "근거 페이지 주소 또는 null",\n      "evidence": "근거 문장 원문 또는 null",\n      "evidenceKo": "근거 문장이 한국어가 아니면 한국어 번역, 한국어면 null",\n      "expected": "공지 전이면 예상 시기와 근거 또는 null",\n      "notes": "참고 사항 또는 null"\n    }\n  ]\n}';
 function exampleFindResp() {
@@ -1580,7 +1581,7 @@ function cleanPeriod(p) {
 var FIND_STATUS = ['upcoming', 'on_sale', 'not_announced', 'ended'];
 var FIND_CATS = ['sports', 'musical', 'concert', 'etc'];
 function validateFind(o) {
-  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아닙니다']] };
+  if (!isPlain(o)) return { errs: [['전체', 'JSON 객체가 아니에요']] };
   // 10.3 의 단일 결과 형식은 후보 1개로 받아들입니다.
   if (o.candidates === undefined && (o.event !== undefined || o.status !== undefined)) {
     var single = validateGoal(o);
@@ -1589,28 +1590,28 @@ function validateFind(o) {
     return { value: [{ title: v.event, category: 'etc', status: v.status === 'announced' ? 'upcoming' : v.status, openAt: v.openAt, period: null, endDate: null, venue: null,
       seller: v.seller, sellerUrl: null, limit: null, sourceUrl: v.sourceUrl, evidence: v.evidence, expected: v.expected, whereToCheck: v.whereToCheck, notes: v.notes }] };
   }
-  if (!Array.isArray(o.candidates)) return { errs: [['candidates(후보)', '배열이 아닙니다']] };
-  if (!o.candidates.length) return { errs: [['candidates(후보)', '비어 있습니다']] };
-  if (o.candidates.length > 5) return { errs: [['candidates(후보)', '5개를 넘습니다(' + o.candidates.length + '개)']] };
+  if (!Array.isArray(o.candidates)) return { errs: [['candidates(후보)', '배열이 아니에요']] };
+  if (!o.candidates.length) return { errs: [['candidates(후보)', '비어 있어요']] };
+  if (o.candidates.length > 5) return { errs: [['candidates(후보)', '5개를 넘었어요(' + o.candidates.length + '개)']] };
   var errs = [], out = [];
   o.candidates.forEach(function (c, i) {
     var F = 'candidates[' + i + ']';
-    if (!isPlain(c)) { errs.push([F, '객체가 아닙니다']); return; }
+    if (!isPlain(c)) { errs.push([F, '객체가 아니에요']); return; }
     var x = {};
-    if (typeof c.title !== 'string' || !c.title.trim()) errs.push([F + '.title(행사 이름)', '비어 있거나 문자열이 아닙니다']);
+    if (typeof c.title !== 'string' || !c.title.trim()) errs.push([F + '.title(행사 이름)', '비어 있거나 문자열이 아니에요']);
     else x.title = clip(wellFormed(c.title).trim(), 100);
     var cat = typeof c.category === 'string' ? c.category.trim().toLowerCase() : '';
     x.category = FIND_CATS.indexOf(cat) >= 0 ? cat : 'etc';
     var st = typeof c.status === 'string' ? c.status.trim().toLowerCase() : '';
-    if (FIND_STATUS.indexOf(st) < 0) errs.push([F + '.status(상태)', FIND_STATUS.join(', ') + ' 가운데 하나가 아닙니다']);
+    if (FIND_STATUS.indexOf(st) < 0) errs.push([F + '.status(상태)', FIND_STATUS.join(', ') + ' 가운데 하나가 아니에요']);
     else x.status = st;
     var t = typeof c.openAt === 'string' ? c.openAt.trim() : '';
     var ms = ISO_RE.test(t) ? Date.parse(t) : NaN;
     x.openAt = null;
     if (x.status === 'upcoming') {
-      if (isNaN(ms)) errs.push([F + '.openAt(예매 오픈 일시)', 'ISO 8601 날짜 문자열이 아닙니다']);
-      else if (ms <= Date.now()) errs.push([F + '.openAt(예매 오픈 일시)', '이미 지난 일시입니다']);
-      else if (ms > Date.now() + 2 * 365.25 * 86400000) errs.push([F + '.openAt(예매 오픈 일시)', '2년을 넘는 일시입니다']);
+      if (isNaN(ms)) errs.push([F + '.openAt(예매 오픈 일시)', 'ISO 8601 날짜 문자열이 아니에요']);
+      else if (ms <= Date.now()) errs.push([F + '.openAt(예매 오픈 일시)', '이미 지난 일시예요']);
+      else if (ms > Date.now() + 2 * 365.25 * 86400000) errs.push([F + '.openAt(예매 오픈 일시)', '2년을 넘는 일시예요']);
       else x.openAt = ms;
     } else if (!isNaN(ms)) x.openAt = ms;
     x.period = cleanPeriod(strOrNull(c.period, 100, F + '.period', errs));
@@ -1621,7 +1622,7 @@ function validateFind(o) {
     x.sellerUrl = typeof c.sellerUrl === 'string' && c.sellerUrl.length <= 2000 ? safeHttps(wellFormed(c.sellerUrl)) : null;
     x.sourceUrl = typeof c.sourceUrl === 'string' && c.sourceUrl.length <= 2000 ? safeHttps(wellFormed(c.sourceUrl)) : null;
     if (c.limitPerPerson == null) x.limit = null;
-    else if (!Number.isInteger(c.limitPerPerson) || c.limitPerPerson < 1 || c.limitPerPerson > 20) errs.push([F + '.limitPerPerson', '1부터 20 사이의 정수가 아닙니다']);
+    else if (!Number.isInteger(c.limitPerPerson) || c.limitPerPerson < 1 || c.limitPerPerson > 20) errs.push([F + '.limitPerPerson', '1부터 20 사이의 정수가 아니에요']);
     else x.limit = c.limitPerPerson;
     x.evidence = strOrNull(c.evidence, 300, F + '.evidence', errs);
     x.evidenceKo = strOrNull(c.evidenceKo, 400, F + '.evidenceKo', errs);
@@ -1656,7 +1657,7 @@ function scrFind() {
   if (!findState) findState = { category: 'etc', msgs: [], fromCard: false, lastQuery: '', send: null, demo: false };
   var st = findState;
   var log = h('div', { class: 'chat', id: 'chatLog', role: 'log', 'aria-live': 'polite', 'aria-label': '예매 찾기 대화' });
-  var inp = h('input', { type: 'text', id: 'findInput', maxlength: 200, placeholder: '찾는 예매를 입력하세요', autocomplete: 'off' });
+  var inp = h('input', { type: 'text', id: 'findInput', maxlength: 200, placeholder: '찾는 예매를 입력해 주세요', autocomplete: 'off' });
   var composing = false;
   inp.addEventListener('compositionstart', function () { composing = true; });
   inp.addEventListener('compositionend', function () { composing = false; });
@@ -1667,7 +1668,7 @@ function scrFind() {
     try { el.scrollIntoView({ block: 'nearest' }); } catch (e) { /* 무시 */ }
   }
   function svcCands(text, ids, query, notes) {
-    addMsg({ who: 'svc', text: text, notes: notes || [], cands: ids.map(collected), src: COLLECT_LABEL, aiBtn: query });
+    addMsg({ who: 'svc', text: text, notes: notes || [], cands: ids.map(collected), aiBtn: query });
   }
   function submitText(raw) {
     var t = clip(wellFormed(String(raw || '')).trim(), 200);
@@ -1677,15 +1678,15 @@ function scrFind() {
     var ids = matchCollected(t);
     if (ids) {
       var notes = [];
-      if (ids.indexOf('ks2026') >= 0 && isKsText(t) && /잠실/.test(t)) notes.push('2026 한국시리즈는 수원과 대구에서 열려 잠실 경기는 없었습니다.');
-      svcCands('수집 데이터에서 찾은 후보입니다.', ids, t, notes);
-    } else addMsg({ who: 'svc', text: '수집 데이터에 없습니다. AI 웹 검색으로 찾습니다.', ai: { query: t } });
+      if (ids.indexOf('ks2026') >= 0 && isKsText(t) && /잠실/.test(t)) notes.push('2026 한국시리즈는 수원과 대구에서 열려서 잠실 경기는 없었어요.');
+      svcCands('이런 예매를 찾았어요.', ids, t, notes);
+    } else addMsg({ who: 'svc', text: '모아 둔 정보에는 없어요. AI 웹 검색으로 찾아볼게요.', ai: { query: t } });
   }
   function choose(label) {
     addMsg({ who: 'user', text: label });
     st.lastQuery = label;
-    if (label === '프로야구') svcCands('프로야구 후보입니다.', ['kbo2027', 'ks2026'], label);
-    else addMsg({ who: 'svc', text: '이 종목은 시제품의 수집 범위가 아닙니다. AI 웹 검색으로 찾습니다.', ai: { query: label } });
+    if (label === '프로야구') svcCands('프로야구 예매를 찾아봤어요.', ['kbo2027', 'ks2026'], label);
+    else addMsg({ who: 'svc', text: '이 종목은 아직 모아 둔 정보가 없어요. AI 웹 검색으로 찾아볼게요.', ai: { query: label } });
   }
   function candCard(c) {
     var s = effStatus(c);
@@ -1694,7 +1695,7 @@ function scrFind() {
       c.period || c.openAt || c.openText ? h('p', { class: 'small' }, c.period ? '기간 ' + c.period : c.openAt ? '예매 오픈 ' + fmtDT(c.openAt) : c.openText) : null,
       c.venue ? h('p', { class: 'small' }, '장소 ' + c.venue) : null,
       c.seller ? h('p', { class: 'small' }, '예매처 ' + c.seller) : null,
-      s === 'ended' ? h('p', { class: 'small', style: 'font-weight:600' }, c.category === 'sports' ? '올해는 종료됐습니다' : '이 예매는 종료됐습니다') : null,
+      s === 'ended' ? h('p', { class: 'small', style: 'font-weight:600' }, c.category === 'sports' ? '올해 예매는 끝났어요' : '이 예매는 끝났어요') : null,
       h('div', { class: 'row' }, srcTag(sourceLabel(c)), btn('자세히 보기', 'btn--sm', function () { pickCand = c; go('pick'); })));
   }
   function candsBlock(list) {
@@ -1709,7 +1710,7 @@ function scrFind() {
     var parts = [];
     if (m.text) parts.push(h('p', null, m.text));
     (m.notes || []).forEach(function (x) { parts.push(h('p', { class: 'msg msg--warn small' }, x)); });
-    if (m.cands) parts.push(candsBlock(m.cands), h('div', { class: 'row' }, srcTag(m.src)));
+    if (m.cands) parts.push(candsBlock(m.cands));
     // 연타 방지: 한 번 누른 종목 버튼은 그 말풍선에서 다시 누를 수 없습니다(다른 종목은 누를 수 있습니다). 이미 연 안내·패널은 다시 만들지 않습니다.
     if (m.choices) {
       var chosen = m.chosenList || (m.chosenList = []);
@@ -1725,8 +1726,16 @@ function scrFind() {
       });
       parts.push(h('div', { class: 'row' }, cbtns));
     }
+    // 예시 문장 버튼: 누르면 그 문장을 보낸 것과 같습니다. 한 번 누른 문장은 다시 누를 수 없습니다.
+    if (m.suggest) {
+      var usedS = m.suggestUsed || (m.suggestUsed = []);
+      parts.push(h('div', { class: 'row' }, m.suggest.map(function (t) {
+        var sb = btn(t, 'btn--sm', function () { if (usedS.indexOf(t) >= 0) return; usedS.push(t); sb.disabled = true; submitText(t); }, { disabled: usedS.indexOf(t) >= 0 });
+        return sb;
+      })));
+    }
     if (m.other) parts.push(h('div', { class: 'row' }, btn('다른 걸 찾기', 'btn--sm', function () {
-      if (!m.otherDone) { m.otherDone = true; addMsg({ who: 'svc', text: '찾는 공연 이름이나 조건을 입력하세요.' }); }
+      if (!m.otherDone) { m.otherDone = true; addMsg({ who: 'svc', text: '찾는 공연 이름이나 조건을 입력해 주세요.' }); }
       inp.focus();
     })));
     if (m.aiBtn) parts.push(h('div', { class: 'row' }, btn('AI 웹 검색으로 최신 정보 찾기', 'btn--sm', function () {
@@ -1738,20 +1747,20 @@ function scrFind() {
         return;
       }
       m.aiIndex = st.msgs.length;
-      addMsg({ who: 'svc', text: 'AI 웹 검색 요청문을 작성했습니다.', ai: { query: m.aiBtn } });
+      addMsg({ who: 'svc', text: 'AI 웹 검색 요청문을 준비했어요.', ai: { query: m.aiBtn } });
     })));
     if (m.ai) {
       var q = m.ai.query;
       var panel = aiPanel({
         title: 'AI 웹 검색: 예매 찾기',
         getPrompt: function () { return findPrompt(q, st.category); },
-        note: function () { return 'Helpy Chat 입력창의 + 버튼에서 웹 검색을 선택한 뒤 보내세요.'; },
+        note: function () { return 'Helpy Chat 입력창의 + 버튼에서 웹 검색을 고른 뒤 보내 주세요.'; },
         example: function () { return q === FIND_EXAMPLE ? exampleFindResp() : null; },
-        exampleMissing: '예시 응답은 체험용 예시 문장에서만 사용할 수 있습니다.',
+        exampleMissing: '예시 응답은 체험용 예시 문장에서만 쓸 수 있어요.',
         validate: validateFind,
-        onApply: function (list, source) { addMsg({ who: 'svc', text: 'AI 웹 검색 결과입니다.', cands: list.map(function (x) { return aiToCand(x, source); }), src: source }); },
+        onApply: function (list, source) { addMsg({ who: 'svc', text: 'AI 웹 검색 결과예요.', cands: list.map(function (x) { return aiToCand(x, source); }) }); },
         fallbackLabel: '예매 정보 직접 입력',
-        fallbackHint: '「예매 정보 직접 입력」은 AI 웹 검색 없이 진행하는 방법입니다. 예매처가 올린 예매 일정 안내 글(링크, 캡처 이미지, 글)을 넣거나 예매 오픈 일시를 직접 입력합니다.',
+        fallbackHint: '「예매 정보 직접 입력」을 누르면 AI 웹 검색 없이 진행할 수 있어요. 예매처 안내 글(링크, 캡처 이미지, 글)을 넣거나 예매 오픈 일시를 직접 적으면 돼요.',
         onFallback: function () { go('notice'); },
         startExample: !!m.ai.startExample
       });
@@ -1763,23 +1772,23 @@ function scrFind() {
   st.msgs.forEach(function (m) { log.appendChild(renderMsg(m)); });
   if (!st.msgs.length) {
     var c = st.category;
-    if (c === 'sports') addMsg({ who: 'svc', text: '어떤 종목을 찾으시나요?', choices: ['프로야구', '프로축구', '프로농구', '프로배구'] });
-    else if (c === 'musical') addMsg({ who: 'svc', text: '2026년 11월 16일에 웹에서 수집한 공연입니다.', cands: ['m-rebecca', 'm-twocities', 'm-gwanghwamun'].map(collected), src: COLLECT_LABEL, other: true });
-    else if (c === 'concert') addMsg({ who: 'svc', text: '2026년 11월 16일에 웹에서 수집한 공연입니다.', cands: ['c-sung', 'c-shin', 'c-tei'].map(collected), src: COLLECT_LABEL, other: true });
-    else addMsg({ who: 'svc', text: '찾는 예매를 한 문장으로 입력하세요. 예: 한국시리즈 잠실 경기 예매할 수 있게 도와줘' });
+    if (c === 'sports') addMsg({ who: 'svc', text: '어떤 종목을 찾고 있나요?', choices: ['프로야구', '프로축구', '프로농구', '프로배구'] });
+    else if (c === 'musical') addMsg({ who: 'svc', text: '11월 16일에 확인한 뮤지컬이에요.', cands: ['m-rebecca', 'm-twocities', 'm-gwanghwamun'].map(collected), other: true });
+    else if (c === 'concert') addMsg({ who: 'svc', text: '11월 16일에 확인한 콘서트예요.', cands: ['c-sung', 'c-shin', 'c-tei'].map(collected), other: true });
+    else addMsg({ who: 'svc', text: '어떤 예매를 찾고 있나요? 편하게 적어 주세요.', suggest: st.demo || st.send ? null : FIND_SUGGEST });
     if (st.demo) {
       addMsg({ who: 'user', text: FIND_EXAMPLE });
       st.lastQuery = FIND_EXAMPLE;
-      addMsg({ who: 'svc', text: '체험용 예시 문장입니다. AI 웹 검색 요청문과 예시 응답으로 진행합니다.', ai: { query: FIND_EXAMPLE, startExample: true } });
+      addMsg({ who: 'svc', text: '체험용 예시 문장이에요. 준비된 예시 응답으로 이어서 볼 수 있어요.', ai: { query: FIND_EXAMPLE, startExample: true } });
     }
   }
   if (st.send) { var s0 = st.send; st.send = null; submitText(s0); }
   var form = h('form', { class: 'findbar', onsubmit: function (e) { e.preventDefault(); if (composing) return; submitText(inp.value); inp.value = ''; } },
-    h('label', { class: 'sr-only', for: inp.id }, '찾는 예매를 입력하세요'),
+    h('label', { class: 'sr-only', for: inp.id }, '찾는 예매를 입력해 주세요'),
     h('div', { class: 'findbar__in' }, inp, h('button', { type: 'submit', class: 'btn btn--primary' }, '보내기')));
   return h('div', null,
     h('section', { class: 'sec' },
-      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '예매 찾기'), btn('분야 다시 선택', 'btn--sm', function () { go('home'); })),
+      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '예매 찾기'), btn('분야 바꾸기', 'btn--sm', function () { go('home'); })),
       h('p', { class: 'small muted' }, '분야: ', h('strong', { id: 'findCat' }, CAT[st.category].label))),
     h('section', { class: 'sec', style: 'padding-bottom:0' }, log),
     form);
