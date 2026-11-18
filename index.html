@@ -368,6 +368,12 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
   .panel.is-collapsed .panel__body{display:block}
   .panel__body{padding-top:4px}
 }
+.agentbar{border-top:1px solid var(--line);background:var(--blue-soft)}
+.agentbar__in{max-width:1180px;margin:0 auto;padding:6px max(var(--gutter),env(safe-area-inset-right)) 6px max(var(--gutter),env(safe-area-inset-left));display:flex;flex-wrap:wrap;gap:2px 12px;align-items:center;font-size:12.5px}
+.agentbar__t{min-width:0;overflow-wrap:anywhere}
+.agentbar__a{font-weight:600;color:var(--primary)}
+.agentdone{margin-top:12px}
+.seg__btn.is-hint{outline:2px solid var(--primary);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){
   .spin{animation:none;border-right-color:var(--primary)}
   .q__dot{transition:none}
@@ -416,7 +422,7 @@ fieldset{margin:0 0 12px;padding:0;border:0;min-width:0}
         <h2 class="prod__title" id="homeTitle">[연습] 2026 KBO 포스트시즌 한국시리즈 1차전</h2>
         <dl class="facts">
           <div><dt>장소</dt><dd id="homeVenue">잠실야구장</dd></div>
-          <div><dt>경기일</dt><dd>2026.10.31 (토) 14:00</dd></div>
+          <div><dt>경기일</dt><dd id="homeDate">2026.10.31 (토) 14:00</dd></div>
         </dl>
       </div>
       <dl class="facts prod__meta">
@@ -742,6 +748,7 @@ const JUMPS = [{ value: 'queue', label: '대기열부터' }, { value: 'captcha',
 const TICKETS = [{ id: 'normal', label: '일반', rate: 1 }, { id: 'discount', label: '할인권 (20%)', rate: 0.8 }];
 const METHODS = { card: '신용·체크카드', easy: '간편결제', bank: '무통장입금' };
 const STORE_KEY = 'rehearsal.v2.bookings';
+const ATTEMPT_KEY = 'rehearsal.v2.attempts';   // 시도 기록(티켓 비서가 읽어 코치 리포트에 반영)
 const CAP_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';           // I·O 제외
 const NO_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';    // I·O·0·1 제외
 // 두벌식 자판: 한글 자모 → 같은 자리의 영문 키
@@ -1702,6 +1709,7 @@ function finish(ok, key) {
   run.failKey = key;
   run.failStep = ok ? 0 : (FAIL_INFO[key].step || STAGE_STEP[prev] || 3);
   run.stage = 'done';
+  saveAttempt(ok, key);
   if (ok) session.done++;
   else { session.fail++; setResult(FAIL_INFO[key].title + '.', 'bad'); }
   view = 'book';
@@ -1819,6 +1827,65 @@ function cancelBooking(no) {
   setResult('예매번호 ' + no + ' 취소를 마쳤어요.', 'warn');
   renderHistory();
   renderNavCount();
+}
+
+/* 18-1. 시도 기록(성공과 실패 모두, 최근 50건) */
+const ASSUMED = { queue: ['reaction', 'queue'], captcha: ['reaction', 'queue'], seats: ['reaction', 'queue', 'captcha'], pay: ['reaction', 'queue', 'captcha', 'seats'] };
+function saveAttempt(ok, key) {
+  const ms = v => v == null ? null : Math.round(v);
+  const st = STADIUMS.find(x => x.name === run.venue);
+  const a = {
+    id: 'A' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), at: Date.now(), source: AGENT ? 'agent' : 'site',
+    title: GAME.title.replace(/^\[연습\]\s*/, ''), stadium: st ? st.id : null, scale: run.N, qty: settings.qty, shortcut: run.shortcut || null,
+    reactMs: run.reactMs, rankFirst: run.rankFirst || null,
+    captchaMs: run.capEnd ? ms(run.capEnd - run.capStart) : null, captchaWrong: run.capStart ? run.capWrong : null,
+    seatMs: run.seatEnd ? ms(run.seatEnd - run.seatStart) : null, collisions: run.seatStart ? run.collisions : null,
+    payMs: run.payEnd ? ms(run.payEnd - run.seatEnd) : null, totalMs: ms(run.endPerf - run.shownAt),
+    result: ok ? 'success' : 'fail', failKey: ok ? null : key, failStep: run.failStep,
+    assumed: ASSUMED[run.shortcut] || []   // 바로가기로 건너뛰어 「가정」한 단계
+  };
+  try {
+    const raw = window.localStorage.getItem(ATTEMPT_KEY);
+    let list = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) list = [];
+    list.unshift(a);
+    window.localStorage.setItem(ATTEMPT_KEY, JSON.stringify(list.slice(0, 50)));
+  } catch (e) { /* 저장할 수 없는 환경이면 기록하지 않아요 */ }
+}
+
+/* 18-2. 티켓 비서에서 연 경우(주소 인자 from=agent): 허용 목록과 길이 제한으로 검사하고 글자로만 표시해요 */
+const AGENT = (function () {
+  let p;
+  try { p = new URLSearchParams(location.search); } catch (e) { return null; }
+  if (p.get('from') !== 'agent') return null;
+  const raw = p.get('title') || '';
+  const title = raw.length > 2000 ? '' : Array.from(raw.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '').trim()).slice(0, 120).join('');
+  const stadium = STADIUMS.some(x => x.id === p.get('stadium')) ? p.get('stadium') : null;
+  const scale = SCALES.find(x => String(x.value) === p.get('scale'));
+  const qty = /^[1-4]$/.test(p.get('qty') || '') ? +p.get('qty') : null;
+  const jump = ['captcha', 'seats'].indexOf(p.get('jump')) >= 0 ? p.get('jump') : null;
+  return { title: title || null, stadium, scale: scale ? scale.value : null, qty, jump };
+})();
+function applyAgent() {
+  if (!AGENT) return;
+  if (AGENT.title) { GAME.title = '[연습] ' + AGENT.title; D.homeTitle.textContent = GAME.title; }
+  if (D.homeDate) D.homeDate.textContent = '연습용 가상 일정';
+  if (AGENT.stadium) settings.stadium = AGENT.stadium;
+  if (AGENT.scale) settings.scale = AGENT.scale;
+  if (AGENT.qty) settings.qty = AGENT.qty;
+  const bar = el('div', 'agentbar'), inner = el('div', 'agentbar__in');
+  const back = el('a', 'agentbar__a', '티켓 비서로 돌아가기'); back.href = 'agent/#home';
+  inner.append(el('span', 'agentbar__t', '티켓 비서에서 연 예매 테스트: ' + GAME.title.replace(/^\[연습\]\s*/, '')), back);
+  bar.appendChild(inner);
+  D.topBar.appendChild(bar);
+  const coach = el('a', 'btn btn--primary btn--block agentdone', '티켓 비서에서 코치 리포트 보기'); coach.href = 'agent/#coach';
+  D.scrDone.insertBefore(coach, D.scrDone.querySelector('.btn-row'));
+  if (AGENT.jump) {
+    const j = JUMPS.find(x => x.value === AGENT.jump);
+    for (const b of D.segJump.children) if (b.firstChild && b.firstChild.textContent === j.label) b.classList.add('is-hint');
+    D.segJump.insertAdjacentElement('afterend', el('p', 'opt__help', '티켓 비서가 추천한 단계예요: ' + j.label));
+    setResult('티켓 비서가 추천한 「' + j.label + '」 바로가기를 연습 설정에 강조했어요.', '');
+  }
 }
 
 /* 19. 단계 바로가기 */
@@ -2084,6 +2151,7 @@ function init() {
   buildPrice();
   buildZoneButtons();
   buildPanel();
+  applyAgent();
   bindEvents();
   setPanelOpen(!window.matchMedia('(max-width: 1023px)').matches);
   syncTopH();

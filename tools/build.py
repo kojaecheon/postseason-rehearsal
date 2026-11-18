@@ -8,7 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "postseason-rehearsal.artifact.html"
 OUT = ROOT / "index.html"
-SIZE_LIMIT = 120 * 1024  # 120KB
+SIZE_LIMIT = 160 * 1024  # 160KB(지금 게시 방식인 GitHub Pages 기준. 이전 아티팩트 게시 조건의 120KB 에서 올림)
 FIRST_LINE = "<title>포스트시즌 예매 리허설</title>"
 
 WRAP_HEAD = (
@@ -40,7 +40,7 @@ def main() -> None:
     if not text.startswith(FIRST_LINE):
         fail("아티팩트 파일은 " + FIRST_LINE + " 로 시작해야 합니다.")
     if len(raw) > SIZE_LIMIT:
-        fail("아티팩트 파일이 120KB 를 넘습니다: %d bytes" % len(raw))
+        fail("아티팩트 파일이 160KB 를 넘습니다: %d bytes" % len(raw))
 
     body = text if text.endswith("\n") else text + "\n"
     page = WRAP_HEAD + "\n" + body + WRAP_TAIL + "\n"
@@ -50,7 +50,7 @@ def main() -> None:
     print("artifact : %s  %d bytes (%.1f KB)" % (SRC.name, len(raw), len(raw) / 1024))
     print("index    : %s  %d bytes (%.1f KB)" % (OUT.name, len(data), len(data) / 1024))
     if len(data) > SIZE_LIMIT:
-        print("경고: index.html 이 120KB 를 넘습니다.", file=sys.stderr)
+        print("경고: index.html 이 160KB 를 넘습니다.", file=sys.stderr)
 
 
 if __name__ == "__main__":
