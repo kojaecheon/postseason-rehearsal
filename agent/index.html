@@ -422,7 +422,7 @@ function cleanGoal(g) {
     whereToCheck: Array.isArray(g.whereToCheck) ? g.whereToCheck.filter(function (x) { return typeof x === 'string'; }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
     sourceUrl: safeHttps(g.sourceUrl), source: SOURCES.indexOf(g.source) >= 0 ? g.source : '직접 입력',
     exampleId: GOAL_EX_IDS.indexOf(g.exampleId) >= 0 ? g.exampleId : null, savedAt: g.savedAt,
-    // 지난 예매 오픈 문장(종료된 예매에서 다음 예매 공지 대기로 저장한 경우)
+    // 지난 예매 오픈 문장(종료된 예매에서 다음 예매 일정 대기로 저장한 경우)
     pastOpen: typeof g.pastOpen === 'string' && g.pastOpen.trim() ? clip(wellFormed(g.pastOpen), 200) : null
   };
 }
@@ -486,7 +486,7 @@ function cleanTarget(t) {
     source: SOURCES.indexOf(t.source) >= 0 ? t.source : '직접 입력', savedAt: t.savedAt,
     seller: typeof t.seller === 'string' ? clip(wellFormed(t.seller), 100) : null,
     openText: typeof t.openText === 'string' ? clip(wellFormed(t.openText), 200) : null,
-    // 다음 예매 공지 대기 저장에 쓰는 값(종료 여부, 확인할 곳, 지난 예매 오픈 문장, 출처 주소)
+    // 다음 예매 일정 대기 저장에 쓰는 값(종료 여부, 확인할 곳, 지난 예매 오픈 문장, 출처 주소)
     ended: t.ended === true,
     whereToCheck: Array.isArray(t.whereToCheck) ? t.whereToCheck.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 5).map(function (x) { return clip(wellFormed(x), 100); }) : [],
     pastOpen: typeof t.pastOpen === 'string' && t.pastOpen.trim() ? clip(wellFormed(t.pastOpen), 200) : null,
@@ -539,20 +539,20 @@ function buildGoalExamples() {
   var openS = '일반 예매는 ' + md(open) + ' 14:00 부터 예시티켓에서 진행합니다.';
   return {
     announced: {
-      label: '예매 일정이 공지된 목표(예시)', text: '곧 가상 한국시리즈가 열리는데 1차전 예매에 꼭 성공하고 싶습니다',
+      label: '예매 일정이 나온 예시', text: '곧 가상 한국시리즈가 열리는데 1차전 예매에 꼭 성공하고 싶습니다',
       resp: {
         event: '2026 가상 한국시리즈 1차전', status: 'announced', openAt: isoLocal(open), seller: '예시티켓',
         sourceUrl: 'https://example.com/notice/2026-ks-game1', evidence: openS, expected: null,
-        whereToCheck: ['예시티켓 공지사항'], notes: '1인당 최대 4매까지 구매할 수 있습니다. 선예매 조건은 공지에서 확인이 필요합니다.'
+        whereToCheck: ['예시티켓 안내 페이지'], notes: '1인당 최대 4매까지 구매할 수 있어요. 선예매 조건은 예매 안내에서 확인해 주세요.'
       }
     },
     notAnnounced: {
-      label: '공지 전 목표(예시)', text: '내년 봄 가상 밴드 새벽별 서울 공연을 꼭 예매하고 싶습니다',
+      label: '일정 발표 전 예시', text: '내년 봄 가상 밴드 새벽별 서울 공연을 꼭 예매하고 싶습니다',
       resp: {
         event: '가상 밴드 새벽별 2027 봄 투어 서울 공연', status: 'not_announced', openAt: null, seller: '예시티켓',
         sourceUrl: 'https://example.com/news/saebyeok-2027-tour', evidence: '2027 봄 투어 일정은 추후 공지합니다.',
-        expected: '2027년 2월 무렵 예매 일정 공지 예상(지난 투어는 공연 6주 전에 예매 일정을 공지했습니다)',
-        whereToCheck: ['예시티켓 공지사항', '가상 밴드 새벽별 공식 소식란'], notes: null
+        expected: '2027년 2월 무렵 예매 일정 발표 예상(지난 투어는 공연 6주 전에 예매 일정을 발표했어요)',
+        whereToCheck: ['예시티켓 안내 페이지', '가상 밴드 새벽별 공식 소식란'], notes: null
       }
     },
     ended: {
@@ -625,10 +625,10 @@ function buildExamples() {
   var concertText = [cTitle, '', cEvent, cVenue, cPreS, cOpenS, cLimit, cGrade].join('\n');
   return {
     baseball: {
-      label: '야구 예매 공지(글)', type: 'text', text: baseballText, resp: baseballResp(), plan: baseballPlan
+      label: '야구 예매 안내(글)', type: 'text', text: baseballText, resp: baseballResp(), plan: baseballPlan
     },
     concert: {
-      label: '공연 예매 공지(글)', type: 'text', text: concertText,
+      label: '공연 예매 안내(글)', type: 'text', text: concertText,
       resp: {
         event: { value: '가상 밴드 새벽별 전국 투어 서울 공연', evidence: cEvent },
         venue: { value: '예시 아트홀', evidence: cVenue },
@@ -651,11 +651,11 @@ function buildExamples() {
       }
     },
     link: {
-      label: '공지 링크(링크)', type: 'link', text: 'https://example.com/notice/2026-ks-game1',
+      label: '안내 링크(링크)', type: 'link', text: 'https://example.com/notice/2026-ks-game1',
       resp: baseballResp(), plan: baseballPlan
     },
     inject: {
-      label: '지시문이 섞인 공지(방어 확인)', type: 'text', text: injectText, resp: baseballResp(), plan: baseballPlan
+      label: '지시문이 섞인 안내(방어 확인)', type: 'text', text: injectText, resp: baseballResp(), plan: baseballPlan
     }
   };
 }
@@ -796,7 +796,7 @@ function validateGoal(o) {
   if (typeof o.event !== 'string' || !o.event.trim()) errs.push(['event(행사 이름)', '비어 있거나 문자열이 아니에요']);
   else out.event = clip(wellFormed(o.event).trim(), 100);
   var status = typeof o.status === 'string' ? o.status.trim().toLowerCase() : '';
-  if (GOAL_STATUS.indexOf(status) < 0) errs.push(['status(공지 상태)', GOAL_STATUS.join(', ') + ' 가운데 하나가 아니에요']);
+  if (GOAL_STATUS.indexOf(status) < 0) errs.push(['status(예매 일정 상태)', GOAL_STATUS.join(', ') + ' 가운데 하나가 아니에요']);
   else out.status = status;
   if (out.status === 'announced') {
     var t = typeof o.openAt === 'string' ? o.openAt.trim() : '';
@@ -1119,10 +1119,10 @@ function openRealKeeper() {
 
 /* ---------- 라우팅 ---------- */
 var ROUTES = ['home', 'find', 'pick', 'notice', 'confirm', 'situation', 'schedule', 'alerts', 'keeper', 'warmup', 'check', 'result', 'coach', 'practice', 'records'];
-// 순서 표시는 모든 화면에서 여섯 단계 하나로 통일합니다. 선택한 예매 정보와 읽은 값 확인은 「예매 시기 확인」, 준비 일정과 알림 등록은 「알림 걸기」, 지킴이 화면부터 예매 결과 기록까지는 「예매 당일」입니다.
-var STEP_OF = { home: 0, find: 0, notice: 0, pick: 1, confirm: 1, practice: 2, coach: 3, situation: 4, schedule: 4, alerts: 4, keeper: 5, warmup: 5, check: 5, result: 5 };
+// 순서 표시는 모든 화면에서 여섯 단계 하나로 통일합니다. 예매 시기 확인, 예매 정보 입력, 예매 정보 확인은 「예매 시기 확인」, 준비 일정과 알림 등록은 「알림 걸기」, 지킴이 화면부터 예매 결과 기록까지는 「예매 당일」입니다.
+var STEP_OF = { home: 0, find: 0, pick: 1, notice: 1, confirm: 1, practice: 2, coach: 3, situation: 4, schedule: 4, alerts: 4, keeper: 5, warmup: 5, check: 5, result: 5 };
 var STEPS = ['예매 찾기', '예매 시기 확인', '예매 테스트', '코치 리포트', '알림 걸기', '예매 당일'];
-var TITLES = { home: '홈', find: '예매 찾기', pick: '선택한 예매 정보', notice: '공지 등록', confirm: '읽은 값 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
+var TITLES = { home: '홈', find: '예매 찾기', pick: '예매 시기 확인', notice: '예매 정보 입력', confirm: '예매 정보 확인', situation: '상황 입력', schedule: '준비 일정', alerts: '알림 등록', keeper: '지킴이 화면', warmup: '워밍업 연습', check: '준비 점검', result: '예매 결과 기록', coach: '코치 리포트', practice: '맞춤 연습', records: '내 기록' };
 var cleanups = [], live = [];
 function route() {
   var r = (location.hash || '').replace(/^#/, '');
@@ -1155,7 +1155,7 @@ function render() {
 }
 function scrBroken() {
   var confirmBox = h('div', { class: 'msg msg--warn', hidden: true },
-    h('p', null, '내 예매, 대기 목표, 알림 계획과 준비 일정, 연습 기록, 알림 응답 기록, 실제 예매 결과를 모두 지워요. 되돌릴 수 없어요.'),
+    h('p', null, '내 예매, 대기 예매, 알림 계획과 준비 일정, 연습 기록, 알림 응답 기록, 실제 예매 결과를 모두 지워요. 되돌릴 수 없어요.'),
     h('div', { class: 'row' },
       btn('초기화할게요', 'btn--danger', function () { endKeeper(); resetStorage(); go('home'); }),
       btn('취소', null, function () { confirmBox.hidden = true; })));
@@ -1205,10 +1205,10 @@ function sameEvent(a, b) { var x = normEvent(a); return !!x && x === normEvent(b
 function replaceWarn(event, openAt) {
   var n = S.notice;
   if (!n || (sameEvent(n.event, event) && n.openAt === openAt)) return null;
-  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.');
+  return h('p', { class: 'msg msg--warn small', id: 'replaceWarn' }, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림은 끝나요.');
 }
 // 공지 저장(S2 확정과 예매 10분 전 알림 걸기가 함께 씁니다).
-// opts.fromGoalCard: 대기 카드에서 들어온 경우 대기 목표를 지웁니다. opts.keepSameTarget: 같은 행사의 예매 테스트 대상은 유지합니다.
+// opts.fromGoalCard: 대기 카드에서 들어온 경우 대기 예매를 지웁니다. opts.keepSameTarget: 같은 행사의 예매 테스트 대상은 유지합니다.
 function commitNotice(fields, opts) {
   opts = opts || {};
   fields.id = 'n' + Date.now();
@@ -1216,9 +1216,9 @@ function commitNotice(fields, opts) {
   S.notice = fields;
   save('notice');
   if (keeper) endKeeper();
-  // 공지 대기 목표 정리: 대기 카드에서 들어왔거나 행사 이름이 같을 때만 지웁니다. 무관한 대기 목표는 남깁니다.
+  // 일정 대기 예매 정리: 대기 카드에서 들어왔거나 행사 이름이 같을 때만 지웁니다. 무관한 대기 예매는 남깁니다.
   if (S.goal && (opts.fromGoalCard || sameEvent(S.goal.event, S.notice.event))) { S.goal = null; save('goal'); }
-  // 같은 대화에서 다른 후보를 이어서 확정해도 새로 저장한 대기 목표가 지워지지 않게 합니다.
+  // 같은 대화에서 다른 후보를 이어서 확정해도 새로 저장한 대기 예매가 지워지지 않게 합니다.
   if (findState) findState.fromCard = false;
   // 예매 테스트 대상: S2 확정은 해제하고, 알림 걸기는 같은 행사이면 유지합니다(알림을 건 뒤에도 같은 예매 테스트를 이어서 하기 위함).
   var keep = opts.keepSameTarget && S.target && sameEvent(S.target.title, S.notice.event);
@@ -1253,9 +1253,9 @@ function alertButton(c, cb, cls) {
     var n = S.notice;
     if (n && !(sameEvent(n.event, c.title) && n.openAt === c.openAt)) {
       box.replaceChildren(
-        h('p', null, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림이 종료됩니다.'),
+        h('p', null, '이미 등록한 예매(' + (n.event || '행사 이름 미입력') + ')가 이 일정으로 바뀌고 진행 중인 알림은 끝나요.'),
         h('div', { class: 'row' },
-          btn('교체합니다', 'btn--primary btn--sm', function () { if (cb && !cb.checked) return; box.hidden = true; armAlert(c); }),
+          btn('바꿀게요', 'btn--primary btn--sm', function () { if (cb && !cb.checked) return; box.hidden = true; armAlert(c); }),
           btn('취소', 'btn--sm', function () { box.hidden = true; })));
       box.hidden = false;
       return;
@@ -1414,20 +1414,20 @@ function scrHome() {
   if (S.goal) {
     var g = S.goal;
     var goalConfirm = h('div', { class: 'msg msg--warn', hidden: true },
-      h('p', null, '이 대기 목표를 지울까요?'),
+      h('p', null, '이 대기 예매를 지울까요?'),
       h('div', { class: 'row' }, btn('지울게요', 'btn--danger', function () { S.goal = null; save('goal'); render(); }), btn('취소', null, function () { goalConfirm.hidden = true; })));
     goalCard = h('section', { class: 'sec', id: 'goalCard' },
-      h('h2', { class: 'h2' }, '공지 대기 중인 목표'),
+      h('h2', { class: 'h2' }, '일정을 기다리는 예매'),
       h('div', { class: 'box stack' },
-        h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, g.event), badge('공지 대기', 'warn'), srcTag(g.source === '수집 데이터' ? COLLECT_LABEL : g.source)),
+        h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, g.event), badge('일정 대기', 'warn'), srcTag(g.source === '수집 데이터' ? COLLECT_LABEL : g.source)),
         g.pastOpen ? h('p', { class: 'small', id: 'goalPastOpen' }, '지난 예매 오픈: ' + g.pastOpen) : null,
         h('dl', { class: 'kv' }, h('dt', null, '예상 시기'), h('dd', null, g.expected || '미확인'),
           h('dt', null, '확인할 곳'), h('dd', null, g.whereToCheck.length ? g.whereToCheck.join(', ') : '미확인')),
         h('div', { class: 'row' },
           // 「다시 찾기」는 예매 찾기를 그 목표 문장으로 엽니다.
           btn('다시 찾기', 'btn--primary', function () { flowDemo = false; findOpen('etc', { send: g.text, fromCard: true }); }),
-          // 대기 카드에서 등록한 공지를 확정하면 그 대기 목표를 지웁니다.
-          btn('공지 등록', null, function () { flowDemo = false; resetDraft(true); go('notice'); }),
+          // 대기 카드에서 등록한 공지를 확정하면 그 대기 예매를 지웁니다.
+          btn('예매 정보 입력', null, function () { flowDemo = false; resetDraft(true); go('notice'); }),
           btn('삭제', null, function () { goalConfirm.hidden = false; })),
         goalConfirm));
   }
@@ -1490,7 +1490,7 @@ var COLLECTED = [
     openAt: null, openText: '2026-11-02 11:00 부터 차전별 순차 예매', limit: 4, grades: null,
     method: '입장권 전량 예매. 취소분은 경기 시작 2시간 전부터 구장에서 현장 판매',
     notes: '대진 KT 위즈 대 삼성 라이온즈', result: '결과: 삼성 라이온즈 4승 1패 우승(5차전 11월 8일, 12 대 1)',
-    whereToCheck: ['KBO 공지', '구단별 예매처 공지'], source: '수집 데이터',
+    whereToCheck: ['KBO 공식 안내', '구단별 예매처 안내'], source: '수집 데이터',
     sources: [
       { name: '일간스포츠', date: '2026-11-08', url: 'https://isplus.com/article/view/isp202611080166', evidence: '삼성은 8일 대구 삼성라이온즈파크에서 열린 2026 신한 SOL 뱅크 KBO 포스트시즌 한국시리즈(KS·7전 4선승제) 5차전에서 KT 위즈에 12-1로 승리, 시리즈 전적 4승 1패로 정상에 올랐다.' },
       { name: 'OSEN(미주중앙일보 게재)', date: '2026-11-01', url: 'https://www.koreadaily.com/article/20261101020043794', evidence: '한국시리즈 입장권은 포스트시즌 입장권 단독 판매사인 NOL(야놀자) 티켓 예매 홈페이지와 애플리케이션 그리고 NOL(야놀자) 고객센터를 통해 1인당 최대 4매까지 예매할 수 있다.' },
@@ -1501,7 +1501,7 @@ var COLLECTED = [
   {
     id: 'kbo2027', category: 'sports', sub: 'baseball', title: '2027 KBO 리그 정규시즌', status: 'not_announced',
     period: null, endDate: null, venue: null, seller: null, sellerUrl: null, openAt: null, openText: null, limit: null, grades: null, method: null,
-    notes: null, expected: '2026년 11월 16일 기준으로 예매 일정을 찾지 못했어요.', whereToCheck: ['KBO 공지', '구단별 예매처 공지'],
+    notes: null, expected: '2026년 11월 16일 기준으로 예매 일정을 찾지 못했어요.', whereToCheck: ['KBO 공식 안내', '구단별 예매처 안내'],
     source: '수집 데이터', sources: [], practice: DEFAULT_PRACTICE
   },
   collectedShow('m-rebecca', 'musical', '뮤지컬 〈레베카〉', '충무아트센터 대극장', '2026-11-24', '2027-03-14', 'https://nol.yanolja.com/ticket/products/26013993'),
@@ -1522,7 +1522,7 @@ function isKsText(text) {
   var low = String(text).toLowerCase(), t = low.replace(/\s+/g, '');
   return /한국시리즈|코리안시리즈|코시/.test(t) || /(^|[^a-z])ks([^a-z]|$)/.test(low);
 }
-// 2글자 이하 이름은 앞 글자가 한글이 아니고 뒤 글자가 「블, 크, 프, 지, 션」이 아닐 때만 맞습니다(테이블석, 스테이지 등 제외).
+// 2글자 이하 이름은 앞 글자가 한글이 아니고 뒤 글자가 「블, 크, 프, 지, 션」이 아닐 때만 맞아요(테이블석, 스테이지 등 제외).
 function shortNameHit(low, key) {
   for (var i = low.indexOf(key); i >= 0; i = low.indexOf(key, i + 1)) {
     var prev = i > 0 ? low[i - 1] : '', next = low[i + key.length] || '';
@@ -1794,7 +1794,7 @@ function scrFind() {
     form);
 }
 
-/* ---------- F2 선택한 예매 정보 ---------- */
+/* ---------- F2 예매 시기 확인 ---------- */
 // 예매 테스트 대상 저장: 연습 조건과 실제 예매 조건(예매처, 예매 오픈, 1인 구매 한도, 출처)을 저장하고 연습 사이트를 엽니다.
 function startTest(c) {
   var p = c.practice || DEFAULT_PRACTICE;
@@ -1812,22 +1812,22 @@ function startTest(c) {
 function waitGoalEvent(c, nextOf) { return nextOf ? c.title + ' 다음 예매' : c.title; }
 // 지난 예매 오픈 문장: 종료된 예매의 예매 오픈 일시나 수집한 문장
 function pastOpenText(c) { return effStatus(c) === 'ended' ? (c.openAt ? fmtDT(c.openAt) : (c.openText || null)) : null; }
-// 코치 리포트에서 공지 대기로 저장할 때 target 을 후보 형식으로 바꿉니다(F2 와 같은 저장 규칙을 씁니다).
+// 코치 리포트에서 일정 대기로 저장할 때 target 을 후보 형식으로 바꿉니다(F2 와 같은 저장 규칙을 씁니다).
 function targetAsCand(t) {
   return { title: t.title, status: t.ended ? 'ended' : 'on_sale', endDate: null, openAt: t.ended ? null : t.openAt, openText: t.pastOpen, expected: null,
     whereToCheck: t.whereToCheck, sources: t.sourceUrl ? [{ url: t.sourceUrl }] : [], source: t.source, query: t.title,
     venue: t.venue, seller: t.seller, sellerUrl: t.sellerUrl, limit: t.limit };
 }
-// 공지 대기로 저장 버튼. 다른 행사의 대기 목표가 이미 있으면 교체 안내를 보여 주고 확인을 받은 뒤 저장합니다.
+// 일정 대기로 저장 버튼. 다른 행사의 대기 예매가 이미 있으면 교체 안내를 보여 주고 확인을 받은 뒤 저장합니다.
 function waitGoalButton(label, cls, c, nextOf, done) {
   var confirmBox = h('div', { class: 'msg msg--warn small stack', id: 'goalReplaceWarn', hidden: true });
   var b = btn(label, cls, function () {
     var ev = waitGoalEvent(c, nextOf);
     if (S.goal && !sameEvent(S.goal.event, ev)) {
       confirmBox.replaceChildren(
-        h('p', null, '이미 저장한 공지 대기 목표(' + S.goal.event + ')가 이 예매로 바뀝니다.'),
+        h('p', null, '이미 저장한 대기 예매(' + S.goal.event + ')가 이 예매로 바뀌어요.'),
         h('div', { class: 'row' },
-          btn('교체합니다', 'btn--primary btn--sm', function () { confirmBox.hidden = true; saveWaitGoal(c, nextOf); done(); }),
+          btn('바꿀게요', 'btn--primary btn--sm', function () { confirmBox.hidden = true; saveWaitGoal(c, nextOf); done(); }),
           btn('취소', 'btn--sm', function () { confirmBox.hidden = true; })));
       confirmBox.hidden = false;
       return;
@@ -1840,8 +1840,8 @@ function saveWaitGoal(c, nextOf) {
   S.goal = {
     text: c.query || (findState && findState.lastQuery) || c.title,
     event: waitGoalEvent(c, nextOf),
-    expected: nextOf ? '다음 예매 일정은 공지 전입니다.' : (c.expected || null),
-    whereToCheck: (c.whereToCheck && c.whereToCheck.length ? c.whereToCheck : ['예매처 공지']).slice(0, 5),
+    expected: nextOf ? '다음 예매 일정은 아직 발표되지 않았어요.' : (c.expected || null),
+    whereToCheck: (c.whereToCheck && c.whereToCheck.length ? c.whereToCheck : ['예매처 안내']).slice(0, 5),
     sourceUrl: c.sources[0] ? c.sources[0].url : null,
     source: c.source, exampleId: null, savedAt: Date.now(),
     pastOpen: nextOf ? pastOpenText(c) : null
@@ -1852,13 +1852,13 @@ function scrPick() {
   var c = pickCand;
   if (!c) {
     return h('div', null, h('section', { class: 'sec stack' },
-      h('h1', { class: 'h1' }, '선택한 예매 정보'),
-      h('p', { class: 'msg' }, '선택한 예매가 없습니다. 예매 찾기에서 후보를 고르세요.'),
+      h('h1', { class: 'h1' }, '예매 시기 확인'),
+      h('p', { class: 'msg' }, '선택한 예매가 없어요. 예매 찾기에서 골라 주세요.'),
       h('div', { class: 'row' }, btn('예매 찾기', 'btn--primary', function () { findState ? go('find') : findOpen('etc'); }))));
   }
   var s = effStatus(c), isEx = c.source === '예시 응답', isAi = c.source !== '수집 데이터';
-  var NA = '정보 없음';
-  function row(k, v) { return h('tr', null, h('th', { scope: 'row' }, k), h('td', { class: 'any' }, v == null || v === '' ? NA : v)); }
+  // 값이 없는 항목은 표에서 뺍니다.
+  function row(k, v) { return v == null || v === '' ? null : h('tr', null, h('th', { scope: 'row' }, k), h('td', { class: 'any' }, v)); }
   var p = c.practice || DEFAULT_PRACTICE;
   var table = h('div', { class: 'tbl tbl--fit', id: 'pickInfo' }, h('table', null, h('tbody', null,
     row('행사', c.title), row('분야', CAT[c.category] ? CAT[c.category].label : '기타'),
@@ -1882,44 +1882,44 @@ function scrPick() {
   var endedBox = null;
   if (s === 'ended') {
     endedBox = h('div', { class: 'msg msg--bad stack', role: 'note', id: 'endedNotice' },
-      h('p', { style: 'font-weight:700' }, '주의: 종료된 예매입니다'),
-      c.id === 'ks2026' ? [h('p', null, '2026 한국시리즈는 11월 8일 5차전으로 종료됐습니다. 지금은 예매할 수 없습니다.'), h('p', null, c.result)] : h('p', null, '이 예매는 종료됐습니다.'));
+      h('p', { style: 'font-weight:700' }, '이미 끝난 예매예요'),
+      c.id === 'ks2026' ? [h('p', null, '2026 한국시리즈는 11월 8일 5차전으로 끝났어요. 지금은 예매할 수 없어요.'), h('p', null, c.result)] : h('p', null, '지금은 예매할 수 없어요.'));
   }
   var savedMsg = h('p', { class: 'small', 'aria-live': 'polite' });
-  function saved() { savedMsg.replaceChildren('공지 대기로 저장했습니다. 홈 화면에 표시합니다. ', h('a', { href: '#home' }, '홈으로')); }
+  function saved() { savedMsg.replaceChildren('일정 대기로 저장했어요. 홈에서 볼 수 있어요. ', h('a', { href: '#home' }, '홈으로')); }
   var testBtn = btn('이 예매 조건으로 예매 테스트', s === 'ended' || s === 'upcoming' ? 'btn--primary' : null, function () { startTest(c); });
   // 예매 시기 상자
   var past = pastOpenText(c);
   var whenBox = h('div', { class: 'box box--soft stack', id: 'pickWhen', style: 'gap:2px' }, h('p', { class: 'lbl' }, '예매 시기'),
     s === 'upcoming' && c.openAt ? [h('p', null, '예매 오픈: ' + fmtShort(c.openAt)), h('p', { class: 'small' }, c.openAt > Date.now() ? '남은 시간: ' + remainShort(c.openAt) : remainShort(c.openAt))]
-      : s === 'on_sale' ? [h('p', null, '예매 중입니다.'), c.period ? h('p', { class: 'small' }, '기간: ' + c.period) : null]
-      : s === 'not_announced' ? [h('p', null, '예매 오픈 일시가 아직 나오지 않았습니다.'), c.expected ? h('p', { class: 'small' }, '예상 시기: ' + c.expected) : null]
-      : [h('p', null, '종료된 예매입니다.'), past ? h('p', { class: 'small' }, '지난 예매 오픈: ' + past) : null]);
+      : s === 'on_sale' ? [h('p', null, '예매 중이에요.'), c.period ? h('p', { class: 'small' }, '기간: ' + c.period) : null]
+      : s === 'not_announced' ? [h('p', null, '예매 오픈 일시가 아직 나오지 않았어요.'), c.expected ? h('p', { class: 'small' }, '예상 시기: ' + c.expected) : null]
+      : [h('p', null, past ? '지난 예매 오픈: ' + past : '지난 예매 오픈 일시는 확인되지 않았어요.')]);
   // 알림 걸기를 할 수 없는 상태의 안내
-  var alertNote = s === 'ended' ? h('p', { class: 'small muted', id: 'alertNote' }, '다음 예매 일정이 나오면 알림을 걸 수 있습니다.')
-    : s === 'not_announced' ? h('p', { class: 'small muted', id: 'alertNote' }, '예매 오픈 일시가 나오면 알림을 걸 수 있습니다.') : null;
+  var alertNote = s === 'ended' ? h('p', { class: 'small muted', id: 'alertNote' }, '다음 예매 일정이 나오면 알림을 걸 수 있어요.')
+    : s === 'not_announced' ? h('p', { class: 'small muted', id: 'alertNote' }, '예매 오픈 일시가 나오면 알림을 걸 수 있어요.') : null;
   var actions = [], goalWarn = null;
   if (s === 'ended') {
-    var wg = waitGoalButton('다음 예매 공지 대기로 저장', null, c, true, saved);
+    var wg = waitGoalButton('다음 예매 일정 대기로 저장', null, c, true, saved);
     actions.push(testBtn, wg.btn); goalWarn = wg.box;
   } else if (s === 'on_sale') {
     if (c.sellerUrl) actions.push(h('a', { class: 'btn btn--primary', href: c.sellerUrl, target: '_blank', rel: 'noopener noreferrer' }, '예매처에서 예매'));
     actions.push(testBtn);
   } else if (s === 'not_announced') {
-    var wg2 = waitGoalButton('공지 대기로 저장', 'btn--primary', c, false, saved);
+    var wg2 = waitGoalButton('일정 대기로 저장', 'btn--primary', c, false, saved);
     actions.push(wg2.btn, btn('확인 알림 일정 파일 내려받기', null, function () { downloadGoalIcs(c.title); }));
     goalWarn = wg2.box;
   }
   var prep = null, cbLabel = null;
   if (s === 'upcoming') {
     var cb = isAi ? h('input', { type: 'checkbox', id: uid('pchk') }) : null;
-    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처 확인에 체크하면 알림 걸기와 준비 일정 만들기를 진행합니다.');
+    var hint = h('p', { class: 'small muted', id: uid('phint') }, '출처를 확인했다고 체크하면 알림 걸기와 준비 일정 만들기를 할 수 있어요.');
     // 주 버튼: 예매 테스트(체크 없이 가능)와 예매 10분 전 알림 걸기(AI 응답이면 출처 확인 체크 필요)
     // 이미 이 예매에 알림을 걸었으면 다시 걸지 않고 알림 등록 화면으로 가는 버튼을 둡니다.
     var already = alertSetFor(c);
     var ab = alertButton(c, cb, 'btn--primary');
     actions.push(testBtn, already ? btn('알림 등록 보기', null, function () { go('alerts'); }) : ab.btn);
-    goalWarn = already ? h('p', { class: 'msg msg--good small', id: 'pickAlertDone' }, '이 예매에 알림을 걸었습니다(' + fmtDT(c.openAt) + ').') : ab.box;
+    goalWarn = already ? h('p', { class: 'msg msg--good small', id: 'pickAlertDone' }, '이 예매에 알림을 걸었어요(' + fmtDT(c.openAt) + ').') : ab.box;
     var prepBtn = btn('값을 확인하고 준비 일정 만들기', null, function () {
       if (cb && !cb.checked) return;
       var ev = c.sources[0] ? c.sources[0].evidence : null;
@@ -1938,36 +1938,38 @@ function scrPick() {
       prepBtn.disabled = true; prepBtn.setAttribute('aria-describedby', hint.id); ab.btn.setAttribute('aria-describedby', hint.id);
       cb.addEventListener('change', function () { prepBtn.disabled = !cb.checked; ab.btn.disabled = !cb.checked; hint.hidden = cb.checked; });
     } else hint.hidden = true;
-    cbLabel = cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처 공지에서 예매 오픈 일시를 확인했습니다' : '공식 공지에서 예매 오픈 일시를 직접 확인했습니다') : null;
+    cbLabel = cb ? h('label', { class: 'check', for: cb.id }, cb, c.sources[0] && c.sources[0].url ? '출처에서 예매 오픈 일시를 확인했어요' : '공식 안내에서 예매 오픈 일시를 직접 확인했어요') : null;
     prep = h('div', { class: 'stack' }, hint, replaceWarn(c.title, c.openAt), h('div', { class: 'row' }, prepBtn));
   }
   var delGoal = s === 'ended' && S.goal && findState && findState.fromCard && sameEvent(S.goal.event, c.title) ? h('div', { class: 'msg msg--warn stack', id: 'endedGoal' },
-    h('p', null, '공지 대기 목표(' + S.goal.event + ')의 행사가 종료됐습니다. 공지 대기 목표를 삭제하세요.'),
-    h('div', { class: 'row' }, btn('대기 목표 삭제', 'btn--danger', function () { S.goal = null; save('goal'); findState.fromCard = false; render(); }))) : null;
+    h('p', null, '일정을 기다리던 예매(' + S.goal.event + ')가 끝났어요. 아래 버튼으로 삭제해 주세요.'),
+    h('div', { class: 'row' }, btn('대기 예매 삭제', 'btn--danger', function () { S.goal = null; save('goal'); findState.fromCard = false; render(); }))) : null;
+  var detailSec = h('section', { class: 'sec stack', id: 'pickDetail' }, h('h2', { class: 'h2' }, '예매 상세'), table);
+  var srcSec = h('section', { class: 'sec stack', id: 'pickSrc' },
+    h('h2', { class: 'h2' }, '출처'),
+    h('p', { class: 'msg msg--warn small' }, isAi ? 'AI 검색 결과는 틀릴 수 있어요. 출처를 열어 확인해 주세요.' : '2026년 11월 16일에 모은 정보예요. 예매 전에 예매처 안내를 다시 확인해 주세요.'),
+    srcList);
+  var nextSec = h('section', { class: 'sec stack', id: 'pickNext' },
+    h('h2', { class: 'h2' }, '다음 단계'),
+    cbLabel,
+    actions.length ? h('div', { class: 'row' }, actions) : null,
+    alertNote, goalWarn, prep, savedMsg, delGoal,
+    h('p', { class: 'small muted' }, '예매 테스트는 전체 화면 연습 사이트에서 해요. 실제 예매처에는 접속하지 않아요.'));
+  // 예매 시기 바로 아래에 할 일을 둡니다. 출처 확인 체크가 필요한 AI 결과만 출처를 먼저 보여 줍니다.
   return h('div', null,
     h('section', { class: 'sec stack' },
-      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '선택한 예매 정보'), btn('예매 찾기로', 'btn--sm', function () { findState ? go('find') : findOpen(c.category); })),
+      h('div', { class: 'row' }, h('h1', { class: 'h1', style: 'margin-right:auto' }, '예매 시기 확인'), btn('예매 찾기로', 'btn--sm', function () { findState ? go('find') : findOpen(c.category); })),
       endedBox,
       h('div', { class: 'row' }, h('p', { class: 'h3', style: 'margin:0' }, c.title), badge(STATUS_LABEL[s], STATUS_KIND[s]), srcTag(sourceLabel(c))),
-      whenBox,
-      table),
-    h('section', { class: 'sec stack' },
-      h('h2', { class: 'h2' }, '출처'),
-      h('p', { class: 'msg msg--warn small' }, isAi ? 'AI 검색 결과는 틀릴 수 있습니다. 출처를 열어 확인하세요.' : '2026년 11월 16일에 수집한 정보입니다. 예매 전에 예매처 공지를 다시 확인하세요.'),
-      srcList),
-    h('section', { class: 'sec stack' },
-      h('h2', { class: 'h2' }, '다음 단계'),
-      cbLabel,
-      actions.length ? h('div', { class: 'row' }, actions) : null,
-      alertNote, goalWarn, prep, savedMsg, delGoal,
-      h('p', { class: 'small muted' }, '예매 테스트는 전체 화면 연습 사이트에서 진행합니다. 실제 예매처에 접속하지 않습니다.')));
+      whenBox),
+    cbLabel ? [srcSec, nextSec, detailSec] : [nextSec, detailSec, srcSec]);
 }
 
-/* ---------- S1 공지 등록 ---------- */
+/* ---------- S1 예매 정보 입력 ---------- */
 var draft = { type: 'text', typeManual: false, text: '', imageUrl: null, imageName: '', exampleId: null, result: null };
 // 「예매 준비 과정 체험」으로 들어오면 AI 요청 패널을 예시 응답 탭으로 시작합니다.
 var flowDemo = false;
-// fromGoalCard: 공지 대기 카드의 「공지 등록」으로 들어온 경우. 예시를 골라도 유지하고, fromGoal 은 해제합니다.
+// fromGoalCard: 일정 대기 카드의 「예매 정보 입력」으로 들어온 경우. 예시를 골라도 유지하고, fromGoal 은 해제합니다.
 function setDraftExample(id) {
   var e = EX[id];
   if (draft.imageUrl) { try { URL.revokeObjectURL(draft.imageUrl); } catch (x) { /* 무시 */ } }
@@ -2001,7 +2003,7 @@ function noticePrompt() {
   return lines.join('\n');
 }
 function scrNotice() {
-  var ta = h('textarea', { id: 'noticeInput', rows: 9, placeholder: '공지 글이나 공지 주소를 붙여 넣으세요. 캡처 이미지는 이 입력란에 붙여 넣거나 끌어다 놓거나 파일로 고릅니다.' });
+  var ta = h('textarea', { id: 'noticeInput', rows: 9, placeholder: '예매 안내 글이나 주소를 붙여 넣어 주세요. 캡처 이미지는 여기에 붙여 넣거나 끌어다 놓거나 파일로 고를 수 있어요.' });
   ta.value = draft.text;
   var typeSel = h('select', { id: uid('type') }, ['text', 'link', 'image'].map(function (t) { return h('option', { value: t }, TYPE_LABEL[t]); }));
   var typeInfo = h('span', { class: 'small muted' });
@@ -2016,15 +2018,15 @@ function scrNotice() {
     typeInfo.textContent = draft.typeManual ? '직접 선택' : '자동 판별: ' + TYPE_LABEL[detectType()];
     if (draft.imageUrl) {
       preview.replaceChildren(
-        h('img', { src: draft.imageUrl, alt: '붙여 넣은 공지 캡처 미리보기' }),
-        h('p', { class: 'small muted' }, '미리보기만 표시하며 저장하지 않습니다. 캡처에 개인정보가 보이면 올리기 전에 가리세요.'),
+        h('img', { src: draft.imageUrl, alt: '붙여 넣은 예매 안내 캡처 미리보기' }),
+        h('p', { class: 'small muted' }, '미리보기만 보여 주고 저장하지 않아요. 캡처에 개인정보가 보이면 올리기 전에 가려 주세요.'),
         h('div', { class: 'row' }, btn('이미지 제외', 'btn--sm', function () { try { URL.revokeObjectURL(draft.imageUrl); } catch (e) { /* 무시 */ } draft.imageUrl = null; sync(); })));
     } else preview.replaceChildren();
     if (panel) panel.refresh();
   }
   function setImage(file) {
     if (!file) return;
-    if (!/^image\//.test(file.type)) { exMsg.textContent = '이미지 파일만 넣을 수 있습니다.'; return; }
+    if (!/^image\//.test(file.type)) { exMsg.textContent = '이미지 파일만 넣을 수 있어요.'; return; }
     if (draft.imageUrl) { try { URL.revokeObjectURL(draft.imageUrl); } catch (e) { /* 무시 */ } }
     draft.imageUrl = URL.createObjectURL(file); draft.imageName = file.name || '';
     draft.exampleId = null; sync();
@@ -2045,52 +2047,52 @@ function scrNotice() {
   });
   fileIn.addEventListener('change', function () { if (fileIn.files && fileIn.files[0]) setImage(fileIn.files[0]); fileIn.value = ''; });
   typeSel.addEventListener('change', function () { draft.type = typeSel.value; draft.typeManual = true; sync(); });
-  drop.append(field('공지 입력', ta),
+  drop.append(field('예매 안내', ta),
     h('div', { class: 'row' }, btn('이미지 파일 선택', 'btn--sm', function () { fileIn.click(); }), fileIn,
-      h('span', { class: 'small muted' }, '붙여넣기, 끌어다 놓기, 파일 선택 모두 가능합니다.')),
+      h('span', { class: 'small muted' }, '붙여넣기, 끌어다 놓기, 파일 선택 모두 돼요.')),
     preview,
     h('div', { class: 'row' }, h('label', { class: 'lbl', for: typeSel.id }, '입력 종류'), h('div', { style: 'width:150px' }, typeSel), typeInfo));
   var exBtns = Object.keys(EX).map(function (id) {
     return btn(EX[id].label, 'btn--sm', function () {
       setDraftExample(id); ta.value = draft.text; sync();
-      exMsg.textContent = '예시 공지를 채웠습니다. 가상의 행사와 예매처 「예시티켓」입니다.';
+      exMsg.textContent = '예시 안내를 채웠어요. 가상의 행사와 예매처 「예시티켓」이에요.';
     });
   });
   panel = aiPanel({
-    title: 'AI 요청: 공지 읽기',
+    title: 'AI 요청: 예매 안내 읽기',
     getPrompt: noticePrompt,
     note: function () {
-      if (draft.type === 'image') return draft.imageUrl ? 'Helpy Chat 에 이 이미지를 함께 첨부하세요.' : '캡처 이미지를 먼저 넣으세요. Helpy Chat 에 이 이미지를 함께 첨부해야 합니다.';
-      if (draft.type === 'link') return '요청문에 공지 주소가 들어 있습니다. Helpy Chat 이 주소의 공지 페이지를 열어 읽습니다. 로그인이 필요한 페이지는 읽지 못하므로 캡처나 글로 바꿔 입력하세요.';
-      if (!draft.text.trim()) return '공지 글을 먼저 입력하세요.';
+      if (draft.type === 'image') return draft.imageUrl ? 'Helpy Chat 에 이 이미지를 함께 첨부해 주세요.' : '캡처 이미지를 먼저 넣어 주세요. Helpy Chat 에 이 이미지를 함께 첨부해야 해요.';
+      if (draft.type === 'link') return '요청문에 예매 안내 주소가 들어 있어요. Helpy Chat 이 그 페이지를 열어 읽어요. 로그인이 필요한 페이지는 읽지 못하니 캡처나 글로 넣어 주세요.';
+      if (!draft.text.trim()) return '예매 안내 글을 먼저 입력해 주세요.';
       return null;
     },
     example: function () { return draft.exampleId && draft.text === EX[draft.exampleId].text && !draft.imageUrl ? EX[draft.exampleId].resp : null; },
-    exampleMissing: '예시 응답은 내장 예시 공지를 골랐을 때만 사용할 수 있습니다. 직접 입력으로 진행하세요.',
+    exampleMissing: '예시 응답은 준비된 예시 안내를 골랐을 때만 쓸 수 있어요. 직접 입력으로 진행해 주세요.',
     validate: validateNotice,
     onApply: function (v, source) { draft.result = { values: v.values, evidence: v.evidence, source: source }; go('confirm'); },
     fallbackLabel: '직접 입력으로 전환',
-    fallbackHint: '「직접 입력으로 전환」은 AI 없이 예매 오픈 일시와 예매처를 직접 입력하는 방법입니다.',
+    fallbackHint: '「직접 입력으로 전환」을 누르면 AI 없이 예매 오픈 일시와 예매처를 직접 적을 수 있어요.',
     onFallback: function () { draft.result = { values: {}, evidence: {}, source: '직접 입력' }; go('confirm'); },
     startExample: flowDemo && !!draft.exampleId
   });
   sync();
   return h('div', null,
     h('section', { class: 'sec' },
-      h('h1', { class: 'h1' }, '공지 등록'),
-      h('p', { class: 'lead' }, '예매 공지(예매처가 올린 예매 일정 안내 글)를 글, 링크, 캡처 이미지 가운데 편한 형식으로 넣습니다. 입력 종류는 자동으로 판별합니다.')),
+      h('h1', { class: 'h1' }, '예매 정보 입력'),
+      h('p', { class: 'lead' }, '예매처가 올린 예매 안내를 글, 링크, 캡처 이미지 가운데 편한 형식으로 넣어 주세요. 입력 종류는 자동으로 판별해요.')),
     h('section', { class: 'sec stack' },
-      h('h2', { class: 'h2' }, '예시 공지'),
+      h('h2', { class: 'h2' }, '예시 안내'),
       h('div', { class: 'row' }, exBtns),
       exMsg,
       drop),
     h('section', { class: 'sec stack' },
       panel.el,
       h('div', { class: 'row' }, btn('직접 입력', null, function () { draft.result = { values: {}, evidence: {}, source: '직접 입력' }; go('confirm'); }),
-        h('span', { class: 'small muted' }, 'AI 없이 모든 항목을 직접 입력합니다.'))));
+        h('span', { class: 'small muted' }, 'AI 없이 모든 항목을 직접 입력해요.'))));
 }
 
-/* ---------- S2 읽은 값 확인 ---------- */
+/* ---------- S2 예매 정보 확인 ---------- */
 function scrConfirm() {
   var res = draft.result, rawText = null, source;
   var vals = {}, evid = {};
@@ -2103,7 +2105,7 @@ function scrConfirm() {
     evid = n.evidence || {}; source = n.source || '직접 입력'; rawText = n.rawText || null;
   } else source = '직접 입력';
   var manual = source === '직접 입력';
-  var srcBox = rawText ? h('pre', { class: 'srcText', id: 'srcText', 'aria-label': '공지 원문' }) : null;
+  var srcBox = rawText ? h('pre', { class: 'srcText', id: 'srcText', 'aria-label': '입력한 예매 안내' }) : null;
   function showSource(ev) {
     if (!srcBox) return;
     srcBox.replaceChildren();
@@ -2128,7 +2130,7 @@ function scrConfirm() {
     }
     function upd() {
       var s = status(); st.replaceChildren(badge(s[0], s[1]));
-      evNote.textContent = (!manual && ev && rawText && rawText.indexOf(ev) < 0) ? '근거 문장이 공지 원문에 없습니다. 값을 직접 확인하세요.' : '';
+      evNote.textContent = (!manual && ev && rawText && rawText.indexOf(ev) < 0) ? '근거 문장이 입력한 안내에 없어요. 값을 직접 확인해 주세요.' : '';
       evNote.hidden = !evNote.textContent;
     }
     var row = h('div', { class: 'vrow', 'data-key': k },
@@ -2150,13 +2152,13 @@ function scrConfirm() {
   var limitIn = h('input', { type: 'number', min: 1, max: 20, step: 1, id: uid('limit'), 'aria-label': '1인 구매 한도' });
   limitIn.value = vals.limitPerPerson == null ? '' : String(vals.limitPerPerson); inputs.limitPerPerson = limitIn;
   var gradeIn = textIn('seatGrades', Array.isArray(vals.seatGrades) ? vals.seatGrades.join(', ') : '', '좌석 등급');
-  gradeIn.maxLength = 400; gradeIn.placeholder = '쉼표로 구분합니다';
+  gradeIn.maxLength = 400; gradeIn.placeholder = '쉼표로 구분해 주세요';
   var urlIn = h('input', { type: 'url', id: uid('url'), placeholder: 'https://' });
   urlIn.value = (!res && S.notice && S.notice.sellerUrl) || '';
-  var pastWarn = h('p', { class: 'msg msg--warn small', hidden: true }, '예매 오픈 일시가 지난 시각입니다. 연습용으로는 그대로 진행할 수 있습니다.');
-  var urlErr = h('p', { class: 'msg msg--bad small', hidden: true }, 'https:// 로 시작하는 주소만 입력할 수 있습니다.');
-  var limitErr = h('p', { class: 'msg msg--bad small', hidden: true }, '1인 구매 한도는 1부터 20 사이 정수로 입력합니다.');
-  var okBtn = btn('맞습니다', 'btn--primary btn--big', submit);
+  var pastWarn = h('p', { class: 'msg msg--warn small', hidden: true }, '예매 오픈 일시가 이미 지났어요. 연습용으로는 그대로 진행할 수 있어요.');
+  var urlErr = h('p', { class: 'msg msg--bad small', hidden: true }, 'https:// 로 시작하는 주소만 입력할 수 있어요.');
+  var limitErr = h('p', { class: 'msg msg--bad small', hidden: true }, '1인 구매 한도는 1부터 20 사이 정수로 입력해 주세요.');
+  var okBtn = btn('맞아요', 'btn--primary btn--big', submit);
   var openWrap = h('div', { class: 'two' }, field('날짜', dIn), field('시각', tIn));
   var list = h('div', { class: 'stack' },
     makeRow('event', '행사 이름', textIn('event', vals.event, '행사 이름')),
@@ -2213,15 +2215,15 @@ function scrConfirm() {
   rows.forEach(function (r) { var b = r.querySelector('.badge'); if (b && b.textContent === '확인 필요') checkCount++; });
   return h('div', null,
     h('section', { class: 'sec' },
-      h('h1', { class: 'h1' }, '읽은 값 확인'),
-      h('p', { class: 'lead' }, manual ? '모든 항목을 직접 입력합니다. 예매 오픈 일시는 꼭 입력해야 합니다.' : '읽은 값과 근거 문장을 확인하고 틀린 값은 고칩니다. 예매 오픈 일시가 틀리면 알림 전체가 틀린 시각에 울립니다.'),
-      !manual && checkCount ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '「확인 필요」 항목이 ' + checkCount + '개 있습니다. 공지를 보고 값을 확인하세요.') : null,
-      res && draft.fromGoal ? h('div', { class: 'row', style: 'margin-top:8px' }, btn('공지 글을 등록해 나머지 조건 채우기', null, function () { go('notice'); })) : null),
+      h('h1', { class: 'h1' }, '예매 정보 확인'),
+      h('p', { class: 'lead' }, manual ? '모든 항목을 직접 입력해 주세요. 예매 오픈 일시는 꼭 필요해요.' : '가져온 값과 근거 문장을 확인하고, 틀린 값은 고쳐 주세요. 예매 오픈 일시가 틀리면 알림이 모두 틀린 시각에 울려요.'),
+      !manual && checkCount ? h('p', { class: 'msg msg--warn small', style: 'margin-top:8px' }, '「확인 필요」 항목이 ' + checkCount + '개 있어요. 예매 안내를 보고 값을 확인해 주세요.') : null,
+      res && draft.fromGoal ? h('div', { class: 'row', style: 'margin-top:8px' }, btn('예매 안내를 넣어 나머지 조건 채우기', null, function () { go('notice'); })) : null),
     h('section', { class: 'sec stack' },
-      srcBox ? h('div', { class: 'stack' }, h('h2', { class: 'h3' }, '공지 원문'), h('p', { class: 'small muted' }, '항목을 선택하면 원문에서 근거 문장을 강조합니다.'), srcBox) : null,
+      srcBox ? h('div', { class: 'stack' }, h('h2', { class: 'h3' }, '입력한 예매 안내'), h('p', { class: 'small muted' }, '항목을 고르면 근거 문장을 표시해 드려요.'), srcBox) : null,
       list,
       pastWarn, limitErr,
-      field('예매 페이지 주소(선택)', urlIn, '준비 점검 화면의 「예매처로 이동」 버튼에 씁니다.'),
+      field('예매 페이지 주소(선택)', urlIn, '준비 점검 화면의 「예매처로 이동」 버튼에 써요.'),
       urlErr,
       res ? replaceWarn(vals.event, vals.openAt) : null,
       okBtn));
@@ -2244,8 +2246,8 @@ function defaultPlan(device) {
 function needNotice(title) {
   return h('div', null, h('section', { class: 'sec stack' },
     h('h1', { class: 'h1' }, title),
-    h('p', { class: 'msg' }, '등록한 공지가 없습니다. 공지를 먼저 등록하세요.'),
-    h('div', { class: 'row' }, btn('공지 등록', 'btn--primary', function () { go('notice'); }), btn('10분 전 알림 체험', null, function () { startDemo(exampleInfo()); }))));
+    h('p', { class: 'msg' }, '입력한 예매 정보가 없어요. 예매 정보를 먼저 입력해 주세요.'),
+    h('div', { class: 'row' }, btn('예매 정보 입력', 'btn--primary', function () { go('notice'); }), btn('10분 전 알림 체험', null, function () { startDemo(exampleInfo()); }))));
 }
 function savePlan(v, source, scheduleText, device) {
   var sched = Array.isArray(v.schedule) && v.schedule.length ? v.schedule : defaultSchedule(S.notice.openAt);
@@ -2308,7 +2310,7 @@ function scrSituation() {
         '예매에 쓸 기기: ' + (curDevice() === 'phone' ? '휴대폰' : 'PC')].join('\n');
     },
     example: function () { return examplePlan(n.exampleId); },
-    exampleMissing: '예시 응답은 내장 예시 공지로 등록했을 때만 사용할 수 있습니다. 기본 계획을 사용하세요.',
+    exampleMissing: '예시 응답은 준비된 예시 안내로 입력했을 때만 쓸 수 있어요. 기본 계획을 써 주세요.',
     validate: validatePlan,
     onApply: function (v, source) { savePlan(v, source, sched.value.trim(), curDevice()); showResult(); },
     fallbackLabel: '기본 계획 사용',
@@ -2416,12 +2418,12 @@ function saveIcs(text, name) {
   setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
 }
 function downloadIcs(n) { saveIcs(buildIcs(n, S.plan), 'rehearsal-alerts.ics'); }
-// 공지 대기 목표의 확인 알림: 매일 09:00, 14일 반복.
+// 일정 대기 예매의 확인 알림: 매일 09:00, 14일 반복.
 function downloadGoalIcs(event) {
   var d = new Date(); d.setHours(9, 0, 0, 0);
   if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-  var title = '[티켓 비서] ' + wellFormed(event || '행사') + ' 예매 공지 확인';
-  saveIcs(icsDoc([{ start: d.getTime(), end: d.getTime() + 600000, rrule: 'FREQ=DAILY;COUNT=14', summary: title, desc: '예매 일정이 공지됐는지 확인하세요. 공지되면 Rehearsal Agent 에서 예매 일정 찾기를 다시 진행합니다.' }]), 'rehearsal-goal-check.ics');
+  var title = '[티켓 비서] ' + wellFormed(event || '행사') + ' 예매 일정 확인';
+  saveIcs(icsDoc([{ start: d.getTime(), end: d.getTime() + 600000, rrule: 'FREQ=DAILY;COUNT=14', summary: title, desc: '예매 일정이 나왔는지 확인해 주세요. 일정이 나오면 티켓 비서에서 예매를 다시 찾아 주세요.' }]), 'rehearsal-goal-check.ics');
 }
 function gcalUrl(n, c) {
   try {
@@ -2561,7 +2563,7 @@ function scrResult() {
       h('h1', { class: 'h1' }, '예매 결과 기록'),
       h('p', { class: 'lead' }, (n.event || '행사') + ', 예매 오픈 일시 ' + fmtDT(n.openAt)),
       h('p', { class: 'msg small' }, '실제 예매는 예매처에서 직접 진행합니다. 이 서비스는 결과만 기록합니다.'),
-      prev ? h('p', { class: 'small muted' }, '이 공지의 최근 기록: ' + fmtStamp(prev.at) + ', ' + OUTCOME_LABEL[prev.outcome] + (prev.stage ? '(' + BLOCK_LABEL[prev.stage] + ')' : '')) : null),
+      prev ? h('p', { class: 'small muted' }, '이 예매의 최근 기록: ' + fmtStamp(prev.at) + ', ' + OUTCOME_LABEL[prev.outcome] + (prev.stage ? '(' + BLOCK_LABEL[prev.stage] + ')' : '')) : null),
     h('section', { class: 'sec stack' },
       h('fieldset', { class: 'box', style: 'margin:0' }, h('legend', { class: 'lbl' }, '결과'),
         radios.map(function (r) { return h('label', { class: 'check', for: r.id }, r, OUTCOME_LABEL[r.value]); })),
@@ -2606,7 +2608,7 @@ function scrKeeper() {
     var m;
     if (k.responded === 'seated') m = st === 'open' ? '지금입니다. 예매처에 접속하세요.' : st === 'end' ? '이번 예매 알림을 종료했습니다.' : '응답했습니다. 워밍업 연습과 준비 점검을 진행하세요.';
     else if (k.responded === 'gaveup') m = '이번 예매를 포기했습니다. 알림을 모두 중단했습니다. 등록한 휴대폰 알람을 꺼 주세요.';
-    else if (k.responded === 'missed' || st === 'end') m = k.sawActive || k.responded === 'missed' ? '놓쳤습니다. 응답이 없어 알림을 종료했습니다. 다음 공지를 등록하세요.' : '예매 오픈 5분이 지나 알림을 종료했습니다.';
+    else if (k.responded === 'missed' || st === 'end') m = k.sawActive || k.responded === 'missed' ? '놓쳤습니다. 응답이 없어 알림을 종료했습니다. 다음 예매 정보를 입력하세요.' : '예매 오픈 5분이 지나 알림을 종료했습니다.';
     else m = {
       wait: '대기 중입니다. 오픈 10분 전부터 경고가 시작됩니다.',
       w1: '예매 10분 전입니다. 자리에 앉아 응답해 주세요.',
@@ -2626,7 +2628,7 @@ function scrKeeper() {
       var items = [];
       if (k.responded === 'seated') items.push(h('div', { class: 'row' }, btn('워밍업 연습', 'btn--primary', function () { go('warmup'); }), btn('준비 점검', null, function () { go('check'); })));
       if (!k.demo && S.notice && (st === 'open' || st === 'end')) items.push(h('div', { class: 'row' }, btn('예매 결과 기록', 'btn--primary', function () { go('result'); })));
-      if (k.responded === 'missed' || k.responded === 'gaveup' || st === 'end') items.push(h('div', { class: 'row' }, btn('다음 공지 등록', 'btn--primary', function () { go('notice'); }), btn('내 기록', null, function () { go('records'); })));
+      if (k.responded === 'missed' || k.responded === 'gaveup' || st === 'end') items.push(h('div', { class: 'row' }, btn('다음 예매 정보 입력', 'btn--primary', function () { go('notice'); }), btn('내 기록', null, function () { go('records'); })));
       after.replaceChildren.apply(after, items);
     }
   }
@@ -2934,7 +2936,7 @@ function scrCheck() {
   var goHint = h('p', { class: 'msg msg--warn small', hidden: true }, '오픈 3분 전입니다. 예매처로 이동할 시각입니다.');
   var noRefresh = h('div', { class: 'stack', hidden: true }, h('p', { class: 'nofresh' }, '새로고침 금지'), h('p', { class: 'small' }, '대기열에 들어간 뒤 새로고침하면 순서가 맨 뒤로 갑니다.'));
   function update() {
-    if (openAt == null) { setText(remainEl, '등록한 공지가 없어 시각 안내를 하지 않습니다.'); return; }
+    if (openAt == null) { setText(remainEl, '입력한 예매 정보가 없어 시각 안내를 하지 않습니다.'); return; }
     var r = openAt - Date.now();
     var over = r < -300000;
     setText(remainEl, r > 0 ? '오픈까지 ' + fmtRemain(r) : over ? '오픈 시각이 지났습니다' : '오픈 시각이 됐습니다');
@@ -3020,7 +3022,7 @@ function coachTargetBox(t) {
       h('dt', null, '대기 인원'), h('dd', null, num(r.queueSize) + '명'),
       h('dt', null, '최근 결과'), h('dd', null, outcome)));
 }
-// 다음 단계 구역: 조건을 바꿔 다시 테스트, 종료된 예매면 다음 예매 공지 대기로 저장
+// 다음 단계 구역: 조건을 바꿔 다시 테스트, 종료된 예매면 다음 예매 일정 대기로 저장
 function coachNextSection(t) {
   var c = targetAsCand(t);
   var area = h('div', { class: 'stack', id: 'coachNext' });
@@ -3037,16 +3039,16 @@ function coachNextSection(t) {
       if (cb) cb.addEventListener('change', function () { ab.btn.disabled = !cb.checked; });
       items.push(ab.btn);
       area.append(h('p', { class: 'small' }, '예매 오픈: ' + fmtShort(t.openAt) + ', ' + remainShort(t.openAt)),
-        cb ? h('label', { class: 'check', for: cb.id }, cb, '출처 공지에서 예매 오픈 일시를 확인했습니다') : null, ab.box);
+        cb ? h('label', { class: 'check', for: cb.id }, cb, '출처에서 예매 오픈 일시를 확인했어요') : null, ab.box);
     }
   }
   if (t.ended) {
-    if (S.goal && sameEvent(S.goal.event, waitGoalEvent(c, true))) area.append(h('p', { class: 'msg small' }, '공지 대기로 저장돼 있습니다.'));
+    if (S.goal && sameEvent(S.goal.event, waitGoalEvent(c, true))) area.append(h('p', { class: 'msg small' }, '일정 대기로 저장돼 있어요.'));
     else {
-      var wg = waitGoalButton('다음 예매 공지 대기로 저장', 'btn--primary', c, true, function () {
+      var wg = waitGoalButton('다음 예매 일정 대기로 저장', 'btn--primary', c, true, function () {
         // 저장한 뒤에는 저장 버튼을 숨깁니다. 남겨 두면 다시 눌러 같은 안내가 반복됩니다.
         wg.btn.hidden = true;
-        area.replaceChildren(h('p', { class: 'msg msg--good small' }, '홈에 공지 대기 카드를 저장했습니다.'), h('div', { class: 'row' }, btn('홈', null, function () { go('home'); })));
+        area.replaceChildren(h('p', { class: 'msg msg--good small' }, '홈에 일정 대기 카드를 저장했어요.'), h('div', { class: 'row' }, btn('홈', null, function () { go('home'); })));
       });
       items.push(wg.btn);
       area.append(wg.box);
@@ -3162,7 +3164,7 @@ function scrTargetLaunch(t) {
     h('h1', { class: 'h1' }, '예매 테스트'),
     h('p', { class: 'msg small', id: 'launchLine' }, line),
     h('div', { class: 'row' }, btn('전체 화면 연습 사이트 열기', 'btn--primary btn--big', function () { launchTest(t); })),
-    h('p', { class: 'small muted' }, '예매 테스트는 전체 화면 연습 사이트에서 진행합니다. 실제 예매처에 접속하지 않습니다.')));
+    h('p', { class: 'small muted' }, '예매 테스트는 전체 화면 연습 사이트에서 해요. 실제 예매처에는 접속하지 않아요.')));
 }
 
 /* ---------- S9 맞춤 연습 ---------- */
